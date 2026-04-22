@@ -203,7 +203,7 @@ function SRVisual({price,sr,symbol}){
           <div key={lv.key} style={{display:"flex",alignItems:"stretch",gap:12,minHeight:isNow?52:42}}>
             <div style={{width:80,display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"center",flexShrink:0,padding:"4px 0"}}>
               <div style={{fontSize:11,fontWeight:700,color:lv.color,letterSpacing:"0.06em"}}>{lv.label}</div>
-              <div style={{fontSize:isNow?16:13,fontWeight:isNow?900:700,color:lv.color,marginTop:1}}>{(typeof fu==="function"?fu(lv.value):lv.value)}</div>
+              <div style={{fontSize:isNow?16:13,fontWeight:isNow?900:700,color:lv.color,marginTop:1}}>{fu(lv.value)}</div>
               {lv.pct&&<div style={{fontSize:10,color:T.text3,marginTop:1}}>{lv.pct}</div>}
             </div>
             <div style={{display:"flex",flexDirection:"column",alignItems:"center",width:20,flexShrink:0}}>
@@ -222,44 +222,6 @@ function SRVisual({price,sr,symbol}){
       <div style={{marginTop:12,padding:"10px 14px",background:T.card,borderRadius:8,fontSize:13,color:T.text2,lineHeight:1.7,borderLeft:`3px solid ${T.blue}`}}>
         <span style={{color:T.blue2,fontWeight:700}}>Suggested trade: </span>
         Enter near S1 → take profit at R1 · Potential gain: <span style={{color:T.green,fontWeight:700}}>+{gain}%</span>
-      </div>
-    </div>
-  );
-}){
-  if(!sr||!price) return null;
-  const levels=[
-    {key:"r2",label:"Resistance 2",value:sr.r2,color:T.red,    pct:"+15%"},
-    {key:"r1",label:"Resistance 1",value:sr.r1,color:"#f97316",pct:"+7%"},
-    {key:"now",label:"Current Price",value:price,color:T.blue2,pct:"NOW"},
-    {key:"s1",label:"Support 1",    value:sr.s1,color:"#4ade80",pct:"-6%"},
-    {key:"s2",label:"Support 2",    value:sr.s2,color:T.green, pct:"-14%"},
-  ];
-  const max=sr.r2,min=sr.s2,range=max-min;
-  return(
-    <div style={{background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-      <Lbl color={T.blue2}>Support &amp; Resistance Levels</Lbl>
-      <div style={{fontSize:13,color:T.text3,marginBottom:12,lineHeight:1.6}}>
-        <span style={{color:T.red}}>Red</span> = Resistance — price may stall or drop here ·{" "}
-        <span style={{color:T.green}}>Green</span> = Support — price may bounce up here
-      </div>
-      {levels.map(lv=>{
-        const pct=((lv.value-min)/range)*100;
-        const isNow=lv.key==="now";
-        return(
-          <div key={lv.key} style={{display:"flex",alignItems:"center",gap:10,marginBottom:isNow?10:7}}>
-            <div style={{width:90,fontSize:13,color:lv.color,fontWeight:isNow?800:500,flexShrink:0}}>{lv.label}</div>
-            <div style={{flex:1,position:"relative",height:isNow?10:5,background:T.bdr,borderRadius:3,overflow:"hidden"}}>
-              <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pct}%`,background:lv.color,borderRadius:3}}/>
-            </div>
-            <div style={{width:70,fontSize:13,color:lv.color,fontWeight:isNow?800:500,textAlign:"right",flexShrink:0}}>{fu(lv.value)}</div>
-            <div style={{width:36,fontSize:13,color:T.text3,textAlign:"right",flexShrink:0}}>{lv.pct}</div>
-          </div>
-        );
-      })}
-      <div style={{marginTop:12,padding:"10px 12px",background:T.card,borderRadius:8,fontSize:13,color:T.text2,lineHeight:1.7}}>
-        <span style={{color:T.blue2,fontWeight:700}}>Strategy tip: </span>
-        Consider entering near Support 1 ({fu(sr.s1)}) and taking profit near Resistance 1 ({fu(sr.r1)}).
-        That is a potential <span style={{color:T.green,fontWeight:700}}>{((sr.r1-sr.s1)/sr.s1*100).toFixed(1)}% gain</span>.
       </div>
     </div>
   );
