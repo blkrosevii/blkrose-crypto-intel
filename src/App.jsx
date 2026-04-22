@@ -281,7 +281,7 @@ export default function App(){
       const res=await fetch("/api/chat",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-20250514",max_tokens:1200,
+          model:"claude-sonnet-4-5-20251001",max_tokens:1200,
           messages:[{role:"user",content:`You are ROSE AI — a professional crypto analyst inside the ROSE CRYPTO INTEL DASHBOARD. User is a complete beginner with $${cfg.acct} capital doing swing trades. Mode: ${cfg.paper?"PAPER TRADING":"LIVE TRADING"}.
 
 Context: ${context}
@@ -309,9 +309,18 @@ Reply in EXACTLY this format:
 [Specific steps. Max per trade: $${(cfg.acct*cfg.risk/100).toFixed(2)}. Recommend paper trading if score under 75.]`}]
         })
       });
-      const d=await res.json();
-      setAiResult(d.content?.find(b=>b.type==="text")?.text||"No response.");
-    }catch(e){setAiResult("AI error: "+e.message);}
+      const text = await res.text();
+      let d;
+      try { d = JSON.parse(text); } catch(e) { setAiResult("Parse error: "+text.slice(0,200)); setAiLoad(false); return; }
+      if(d.error) { setAiResult("API Error: "+( d.error.message||d.error.type||JSON.stringify(d.error))); setAiLoad(false); return; }
+      if(d.content && d.content.length > 0) {
+        const textBlock = d.content.find(b=>b.type==="text");
+        if(textBlock && textBlock.text) { setAiResult(textBlock.text); }
+        else { setAiResult("Got response but no text found: "+JSON.stringify(d.content).slice(0,200)); }
+      } else {
+        setAiResult("Unexpected response format: "+JSON.stringify(d).slice(0,300));
+      }
+    }catch(e){setAiResult("Connection error: "+e.message+" — Check that api/chat.js exists in GitHub and Vercel has been redeployed.");}
     setAiLoad(false);
   },[cfg,regime,btc]);
 
