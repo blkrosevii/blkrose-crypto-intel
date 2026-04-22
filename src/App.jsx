@@ -9,7 +9,7 @@ const fu = (n) => {
   if (n >= 0.001) return "$" + n.toFixed(4);
   return "$" + n.toFixed(8);
 };
-const fp  = (n) => n == null ? "—" : `${n > 0 ? "+" : ""}${Number(n).toFixed(2)}%`;
+const fp  = (n) => n == null ? "—" : (n > 0 ? "+" : "") + Number(n).toFixed(2) + "%";
 const pc  = (n) => !n ? "#64748b" : n > 0 ? "#22c55e" : "#ef4444";
 const nowT= () => new Date().toLocaleTimeString("en-US",{hour:"2-digit",minute:"2-digit",second:"2-digit",timeZone:"America/New_York"})+" ET";
 const GC  = "https://api.coingecko.com/api/v3";
@@ -275,7 +275,7 @@ export default function App(){
       const p24=c.price_change_percentage_24h??0;
       const p7=c.price_change_percentage_7d_in_currency??0;
       const vm=c.total_volume&&c.market_cap?((c.total_volume/c.market_cap)*100).toFixed(1):"?";
-      return `${c.name}(${c.symbol?.toUpperCase()}): $${fu(c.current_price)}, 24h ${fp(p24)}, 7d ${fp(p7)}, vol/mcap ${vm}%, signal:${verdict}, S1:${fu(sr?.s1)} R1:${fu(sr?.r1)}`;
+      return c.name+"("+c.symbol?.toUpperCase()+"): $"+fu(c.current_price)+", 24h "+fp(p24)+", 7d "+fp(p7)+", vol/mcap "+vm+"%, signal:"+verdict+", S1:"+fu(sr?.s1)+" R1:"+fu(sr?.r1);
     }).join("\n");
     try{
       const res=await fetch("/api/chat",{
