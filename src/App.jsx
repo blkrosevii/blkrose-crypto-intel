@@ -2,12 +2,12 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 const fu = (n) => {
   if (n == null || isNaN(n)) return "—";
-  if (n >= 1e9) return `$\{(n/1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$\{(n/1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$\{(n/1e3).toFixed(1)}K`;
-  if (n >= 1)   return `$\{n.toFixed(2)}`;
-  if (n >= 0.001) return `$\{n.toFixed(4)}`;
-  return `$\{n.toFixed(8)}`;
+  if (n >= 1e9) return "$" + (n/1e9).toFixed(2) + "B";
+  if (n >= 1e6) return "$" + (n/1e6).toFixed(1) + "M";
+  if (n >= 1e3) return "$" + (n/1e3).toFixed(1) + "K";
+  if (n >= 1)   return "$" + n.toFixed(2);
+  if (n >= 0.001) return "$" + n.toFixed(4);
+  return "$" + n.toFixed(8);
 };
 const fp  = (n) => n == null ? "—" : `${n > 0 ? "+" : ""}${Number(n).toFixed(2)}%`;
 const pc  = (n) => !n ? "#64748b" : n > 0 ? "#22c55e" : "#ef4444";
