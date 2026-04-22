@@ -5,21 +5,11 @@ export default async function handler(req, res) {
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) {
-    return res.status(500).json({ 
-      error: "API key not configured",
-      hint: "Add ANTHROPIC_API_KEY to Vercel environment variables"
-    });
+    return res.status(500).json({ error: "API key not configured" });
   }
 
   try {
-    const body = req.body;
-    
-    // Ensure model and max_tokens are set
-    const payload = {
-      model: "claude-sonnet-4-20250514",
-      max_tokens: 1200,
-      ...body,
-    };
+    const { messages, max_tokens } = req.body;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -28,7 +18,11 @@ export default async function handler(req, res) {
         "x-api-key": ANTHROPIC_KEY,
         "anthropic-version": "2023-06-01",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        model: "claude-3-5-sonnet-20241022",
+        max_tokens: max_tokens || 1200,
+        messages: messages,
+      }),
     });
 
     const data = await response.json();
@@ -36,16 +30,12 @@ export default async function handler(req, res) {
     if (!response.ok) {
       return res.status(response.status).json({
         error: data.error?.message || "Anthropic API error",
-        type: data.error?.type || "unknown",
-        status: response.status,
+        type: data.error?.type,
       });
     }
 
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ 
-      error: error.message,
-      hint: "Network or parsing error"
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
