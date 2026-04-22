@@ -75,6 +75,46 @@ function getSignals(c) {
 const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","render-token":"ai","fetch-ai":"ai",bittensor:"ai","the-graph":"ai","shiba-inu":"meme",pepe:"meme","dogwifcoin":"meme",bonk:"meme",floki:"meme","pax-gold":"rwa",maker:"rwa","ondo-finance":"rwa",tether:"stable","usd-coin":"stable",dai:"stable"};
 const getCat=id=>CAT_MAP[id]||"altcoin";
 
+const CRED_MAP={
+  "bitcoin":      {cred:5,team:"Satoshi Nakamoto",backed:"Decentralized",age:15,flags:[]},
+  "ethereum":     {cred:5,team:"Vitalik Buterin",backed:"Institutional",age:9,flags:[]},
+  "binancecoin":  {cred:3,team:"CZ / Binance",backed:"Binance",age:7,flags:["Exchange risk"]},
+  "ripple":       {cred:4,team:"Ripple Labs",backed:"Institutional",age:12,flags:[]},
+  "solana":       {cred:4,team:"Anatoly Yakovenko",backed:"a16z, Multicoin",age:5,flags:[]},
+  "cardano":      {cred:4,team:"Charles Hoskinson",backed:"IOHK",age:7,flags:[]},
+  "dogecoin":     {cred:3,team:"Community",backed:"Elon influence",age:11,flags:["Meme-driven"]},
+  "litecoin":     {cred:4,team:"Charlie Lee",backed:"Community",age:13,flags:[]},
+  "cosmos":       {cred:4,team:"Tendermint",backed:"ICF",age:6,flags:[]},
+  "filecoin":     {cred:3,team:"Protocol Labs",backed:"a16z",age:4,flags:[]},
+  "avalanche-2":  {cred:4,team:"Emin Gün Sirer",backed:"a16z, Polychain",age:4,flags:[]},
+  "chainlink":    {cred:5,team:"Sergey Nazarov",backed:"Institutional",age:7,flags:[]},
+  "polkadot":     {cred:4,team:"Gavin Wood",backed:"Web3 Foundation",age:5,flags:[]},
+  "uniswap":      {cred:4,team:"Hayden Adams",backed:"a16z",age:5,flags:[]},
+  "sui":          {cred:3,team:"Ex-Meta engineers",backed:"a16z",age:2,flags:["Young project"]},
+  "near-protocol":{cred:4,team:"Illia Polosukhin",backed:"a16z, Pantera",age:4,flags:[]},
+  "aptos":        {cred:3,team:"Ex-Meta engineers",backed:"a16z",age:2,flags:["Young project"]},
+  "injective-protocol":{cred:4,team:"Eric Chen",backed:"Binance Labs",age:4,flags:[]},
+  "arbitrum":     {cred:4,team:"Offchain Labs",backed:"Lightspeed",age:2,flags:[]},
+  "optimism":     {cred:4,team:"Optimism Foundation",backed:"a16z",age:2,flags:[]},
+  "hedera":       {cred:4,team:"Leemon Baird",backed:"Google, IBM",age:5,flags:[]},
+  "render-token": {cred:4,team:"Jules Urbach / OTOY",backed:"Multicoin",age:5,flags:[]},
+  "fetch-ai":     {cred:3,team:"Humayun Sheikh",backed:"Outlier Ventures",age:5,flags:[]},
+  "bittensor":    {cred:4,team:"Jacob Steeves",backed:"Community",age:3,flags:[]},
+  "the-graph":    {cred:4,team:"Yaniv Tal",backed:"Multicoin, DCG",age:4,flags:[]},
+  "shiba-inu":    {cred:2,team:"Anonymous (Ryoshi)",backed:"Community",age:4,flags:["Anonymous","No utility"]},
+  "pepe":         {cred:1,team:"Anonymous",backed:"Community",age:2,flags:["Anonymous","No utility","Pure speculation"]},
+  "dogwifcoin":   {cred:1,team:"Anonymous",backed:"Community",age:1,flags:["Anonymous","Pure speculation"]},
+  "bonk":         {cred:2,team:"Community",backed:"Community",age:2,flags:["Pure speculation"]},
+  "floki":        {cred:2,team:"Community",backed:"Community",age:3,flags:["Speculative"]},
+  "pax-gold":     {cred:5,team:"Paxos Trust",backed:"Regulated",age:5,flags:[]},
+  "maker":        {cred:4,team:"Rune Christensen",backed:"a16z",age:7,flags:[]},
+  "ondo-finance": {cred:4,team:"Nathan Allman",backed:"Pantera",age:2,flags:[]},
+  "tether":       {cred:3,team:"Tether Limited",backed:"Claimed reserves",age:10,flags:["Reserve questions"]},
+  "usd-coin":     {cred:5,team:"Circle / Coinbase",backed:"Fully regulated",age:6,flags:[]},
+  "dai":          {cred:4,team:"MakerDAO",backed:"Crypto collateral",age:6,flags:[]},
+};
+const getCred=id=>CRED_MAP[id]||{cred:3,team:"Various",backed:"Unknown",age:0,flags:[]};
+
 const CATS=[
   {id:"all",     label:"All Coins",   color:T.blue2},
   {id:"largecap",label:"💎 Large Cap",color:T.gold},
@@ -116,6 +156,7 @@ const TABS=[
   {id:"news",       label:"News"},
   {id:"performance",label:"Performance"},
   {id:"ai",         label:"AI Intel"},
+  {id:"guide",      label:"📖 Guide"},
   {id:"settings",   label:"Settings"},
 ];
 
@@ -243,7 +284,7 @@ export default function App(){
       if(verdict==="STRONG BUY"||verdict==="TAKE PROFIT"){
         const recent=alertRef.current.some(a=>a.id===c.id&&Date.now()-a.ts<180000);
         if(!recent){
-          fired.push({...c,verdict,vColor,signals,alertTime:nowT(),ts:Date.now()});
+          fired.push({...c,verdict,vColor,signals,score:getSignals(c).score,cred:c.cred||null,alertTime:nowT(),ts:Date.now()});
           alertRef.current=[...alertRef.current.filter(a=>a.id!==c.id),{id:c.id,ts:Date.now()}];
         }
       }
@@ -251,7 +292,7 @@ export default function App(){
     if(fired.length) setAlerts(prev=>[...fired,...prev].slice(0,30));
   },[coins]);
 
-  const enriched=coins.map(c=>({...c,...getSignals(c)}));
+  const enriched=coins.map(c=>({...c,...getSignals(c),...getCred(c.id)}));
   const btc=enriched.find(c=>c.id==="bitcoin");
   const topBuys=enriched.filter(c=>c.verdict==="STRONG BUY"||c.verdict==="BUY").sort((a,b)=>b.score-a.score);
   const topSells=enriched.filter(c=>c.verdict==="TAKE PROFIT");
@@ -387,6 +428,28 @@ Reply in EXACTLY this format:
               <div style={{height:6,background:T.bdr,borderRadius:3,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${Math.min(Math.abs(c.score||0)*12,100)}%`,background:`linear-gradient(90deg,${T.blue3},${T.blue2})`,borderRadius:3}}/>
               </div>
+            </div>
+            {/* Credibility section */}
+            <div style={{marginBottom:14,padding:"12px 14px",background:T.surf,border:`1px solid ${c.cred>=4?T.green+"44":c.cred>=3?T.gold+"44":T.red+"44"}`,borderRadius:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <Lbl style={{marginBottom:0}}>Credibility Rating</Lbl>
+                <span style={{fontSize:20,letterSpacing:3}}>
+                  {[1,2,3,4,5].map(i=><span key={i} style={{color:i<=(c.cred||3)?"#f59e0b":"rgba(255,255,255,0.15)"}}>{i<=(c.cred||3)?"★":"☆"}</span>)}
+                </span>
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:8}}>
+                {[["Team",c.team||"Unknown"],["Backed By",c.backed||"Unknown"],["Project Age",(c.age||0)+" years"]].map(([k,v])=>(
+                  <div key={k} style={{background:T.card,padding:"7px 10px",borderRadius:6}}>
+                    <div style={{fontSize:11,color:T.text3,marginBottom:3}}>{k}</div>
+                    <div style={{fontSize:13,color:T.text2}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              {c.flags&&c.flags.length>0&&(
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {c.flags.map(f=><span key={f} style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${T.red}18`,border:`1px solid ${T.red}50`,color:T.red}}>⚠ {f}</span>)}
+                </div>
+              )}
             </div>
             {c.sr&&<SRVisual price={c.current_price} sr={c.sr}/>}
             {c.signals?.length>0&&(
@@ -587,7 +650,24 @@ Reply in EXACTLY this format:
                           <span style={{fontSize:12,color:T.text3}}>{a.alertTime}</span>
                         </div>
                       </div>
-                      {a.sr&&<div style={{fontSize:13,color:T.text3}}>S1: <span style={{color:T.green}}>{fu(a.sr.s1)}</span> · R1: <span style={{color:T.red}}>{fu(a.sr.r1)}</span></div>}
+                      {a.sr&&<div style={{fontSize:13,color:T.text3,marginTop:4}}>S1: <span style={{color:T.green}}>{fu(a.sr.s1)}</span> · R1: <span style={{color:T.red}}>{fu(a.sr.r1)}</span></div>}
+                      {/* Confidence score bar */}
+                      <div style={{marginTop:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+                          <span style={{fontSize:12,color:T.text3,letterSpacing:"0.06em"}}>CONFIDENCE</span>
+                          <span style={{fontSize:14,fontWeight:800,color:a.vColor}}>{Math.min(Math.abs(a.score||0)*12,100)}/100</span>
+                        </div>
+                        <div style={{height:6,background:"rgba(255,255,255,0.1)",borderRadius:3,overflow:"hidden"}}>
+                          <div style={{height:"100%",width:Math.min(Math.abs(a.score||0)*12,100)+"%",background:a.vColor,borderRadius:3}}/>
+                        </div>
+                      </div>
+                      {/* Credibility stars */}
+                      {a.cred&&<div style={{display:"flex",alignItems:"center",gap:8,marginTop:6}}>
+                        <span style={{fontSize:12,color:T.text3,letterSpacing:"0.06em"}}>CREDIBILITY</span>
+                        <span style={{fontSize:16,letterSpacing:2}}>
+                          {[1,2,3,4,5].map(i=><span key={i} style={{color:i<=(a.cred||0)?"#f59e0b":"rgba(255,255,255,0.15)"}}>{i<=(a.cred||0)?"★":"☆"}</span>)}
+                        </span>
+                      </div>}
                     </div>
                   ))}
                 </div>
@@ -881,6 +961,141 @@ Reply in EXACTLY this format:
                 <button onClick={()=>setAiResult("")} style={{padding:"10px 20px",background:"transparent",border:`1px solid ${T.bdr}`,borderRadius:10,color:T.text3,cursor:"pointer",fontSize:14,fontFamily:"inherit"}}>← Back to Options</button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* GUIDE */}
+        {tab==="guide"&&(
+          <div style={{maxWidth:860}}>
+            <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.02em",marginBottom:6}}>📖 Reference Guide</div>
+            <div style={{fontSize:15,color:T.text3,marginBottom:24,lineHeight:1.7}}>Everything you need to understand this dashboard — plain English definitions, how every calculation works, and what each signal means.</div>
+
+            {[
+              {
+                title:"🎯 Signal Verdicts — What Each One Means",
+                color:T.blue2,
+                items:[
+                  {term:"STRONG BUY",color:T.green,def:"The highest confidence signal. Multiple strong indicators all pointing up at the same time. Volume is elevated, price momentum is building, and the coin is not overextended. This is the signal you most want to act on."},
+                  {term:"BUY",color:"#4ade80",def:"Good buying opportunity. Fewer indicators than Strong Buy but still a solid setup. Worth considering especially if price is near a Support level."},
+                  {term:"WATCH",color:T.gold,def:"Some positive signs but not enough to act yet. Put it on your watchlist and check back. Often upgrades to BUY or STRONG BUY within hours if momentum builds."},
+                  {term:"CAUTION",color:T.gold,def:"Mixed signals. Something looks off — could be overextended, losing momentum, or showing early reversal signs. Not a time to buy. Consider reducing position if you already hold it."},
+                  {term:"TAKE PROFIT",color:T.red,def:"The coin has moved significantly and the data suggests a pullback or reversal is likely. If you hold this coin, consider taking some or all profits. Not a signal to buy."},
+                  {term:"STABLE",color:T.text3,def:"Stablecoins like USDT and USDC. These are meant to stay at $1.00. Use them to park your money safely between trades."},
+                ]
+              },
+              {
+                title:"📊 Confidence Score — How It Is Calculated",
+                color:T.blue2,
+                items:[
+                  {term:"What it is",color:T.blue2,def:"A score from 0 to 100 that measures how strong the buy or sell signal is. Higher = stronger signal. We recommend only acting on scores of 65 or above as a beginner."},
+                  {term:"Volume Score (up to 30 pts)",color:T.blue2,def:"Measures unusual trading activity. When a coin's daily volume is more than 20% of its total market cap, something significant is happening — traders are paying attention. A spike to 50%+ is a very strong sign."},
+                  {term:"Price Momentum (up to 25 pts)",color:T.blue2,def:"Looks at price change over 1 hour, 24 hours, and 7 days. If all three timeframes are positive and accelerating, that is a strong trend. A coin up 20%+ in 24 hours scores maximum points here."},
+                  {term:"ATH Discount (up to 15 pts)",color:T.blue2,def:"ATH means All-Time High — the highest price the coin has ever reached. If a coin is 85% or more below its ATH, it is deeply discounted and scores bonus points. Think of it like buying something on a massive sale."},
+                  {term:"Credibility Bonus (up to 10 pts)",color:T.blue2,def:"Coins with a 5-star credibility rating (like Bitcoin and Ethereum) get bonus confidence points. Anonymous meme coins with no utility get fewer points. This prevents the tool from over-hyping risky projects."},
+                  {term:"Overextension Penalty (-20 pts)",color:T.red,def:"If a coin is up 50%+ in 24 hours or 100%+ in 7 days, points are deducted. Chasing coins that have already pumped is one of the most common beginner mistakes. The penalty protects you from FOMO."},
+                ]
+              },
+              {
+                title:"📈 Support & Resistance — Your Father's Method",
+                color:T.green,
+                items:[
+                  {term:"What it is",color:T.green,def:"Support and Resistance are horizontal price levels where a coin has historically paused, bounced, or reversed. They are the foundation of technical analysis and used by professional traders worldwide."},
+                  {term:"Support (green lines)",color:T.green,def:"A price floor. When a coin falls to this level, buyers historically step in and push the price back up. Think of it as a trampoline — price bounces off it. Buying near Support gives you a much better entry point."},
+                  {term:"Resistance (red lines)",color:T.red,def:"A price ceiling. When a coin rises to this level, sellers historically step in and push the price back down. Think of it as a ceiling — price gets rejected. Selling near Resistance locks in profit before the drop."},
+                  {term:"Support 1 (S1)",color:"#4ade80",def:"The nearest support level below the current price. Usually about 6% below current price. This is the most relevant level — a good potential entry point if price pulls back slightly."},
+                  {term:"Support 2 (S2)",color:T.green,def:"A deeper support level about 14% below current price. If S1 breaks, price often falls to S2 before recovering. This is where you might add to a position on a bigger dip."},
+                  {term:"Resistance 1 (R1)",color:"#f97316",def:"The nearest resistance level above current price. About 7% above. This is your primary Take Profit target — where you consider selling some of your position."},
+                  {term:"Resistance 2 (R2)",color:T.red,def:"A stronger resistance level about 15% above current price. If R1 breaks cleanly, price often continues to R2. This is your secondary Take Profit target for a bigger move."},
+                  {term:"Strategy tip",color:T.blue2,def:"The ideal trade is: buy near S1 (support), sell near R1 (resistance). That is typically a 10-15% gain with a clearly defined exit. Always set your Stop Loss just below S1 so you know your maximum loss before entering."},
+                ]
+              },
+              {
+                title:"⭐ Credibility Rating — How We Score Projects",
+                color:T.gold,
+                items:[
+                  {term:"★★★★★ (5 stars)",color:T.gold,def:"Highest credibility. Bitcoin, Ethereum, Chainlink, USDC. These are battle-tested projects with known teams, institutional backing, years of track record, and real utility. Safest to trade as a beginner."},
+                  {term:"★★★★ (4 stars)",color:T.gold,def:"High credibility. Solana, XRP, Cardano, Avalanche. Strong teams and real products but slightly more risk than 5-star coins. Still good choices for beginners."},
+                  {term:"★★★ (3 stars)",color:T.gold,def:"Medium credibility. Newer projects or projects with some concerns. Can still be good trades but require more caution. Reduce position size on these."},
+                  {term:"★★ (2 stars)",color:"#f97316",def:"Lower credibility. Often meme coins or projects with anonymous teams. High risk. Only trade these with money you are completely prepared to lose. Never more than 1% of your account."},
+                  {term:"★ (1 star)",color:T.red,def:"Very low credibility. Pure speculation. Anonymous teams, no utility, no real product. These can 10x overnight or go to zero. Treat like a lottery ticket — only if you enjoy high risk."},
+                ]
+              },
+              {
+                title:"💰 Risk Management — The Rules That Protect You",
+                color:"#f97316",
+                items:[
+                  {term:"Risk Per Trade (default 2%)",color:"#f97316",def:"Never risk more than 2% of your account on any single trade. With a $500 account that is $10 per trade. This means even 10 losses in a row only costs you $100. It keeps you in the game long enough to learn."},
+                  {term:"Stop Loss",color:T.red,def:"A pre-set price where you will exit a trade to limit your loss. Always set this BEFORE entering a trade, not after. The app calculates it automatically at 4% below your entry price. Never move it lower to avoid being stopped out."},
+                  {term:"Take Profit",color:T.green,def:"A pre-set price where you will exit a trade to lock in your gain. The app calculates it automatically based on your trade type — scalp is 1.5x the stop distance, swing is 2.5x, position is 3.5x."},
+                  {term:"Risk/Reward Ratio (R:R)",color:T.blue2,def:"Compares how much you could gain vs how much you could lose. A 2:1 R:R means you could gain $20 but only risk $10. Always aim for 1.5:1 or better. Never take a trade where you risk more than you stand to gain."},
+                  {term:"Daily Loss Limit (default 3%)",color:T.red,def:"If you lose 3% of your account in one day the app locks you out of trading for that day. With $500 that is $15. This prevents the devastating spiral of revenge trading — where you make bigger and bigger bets to try to win back losses."},
+                  {term:"Max Open Positions (default 4)",color:"#f97316",def:"Never have more than 4 trades open at once. More positions means more to watch, more stress, and more risk. As a beginner with limited screen time, 2-3 is even better."},
+                ]
+              },
+              {
+                title:"📉 Trade Types — Scalp, Swing, Position",
+                color:T.purple2,
+                items:[
+                  {term:"Scalp Trade",color:T.purple2,def:"Very short-term trade lasting minutes to hours. You aim for a small quick gain (2-5%) and get out fast. Requires watching the screen closely. NOT recommended for beginners with limited screen time."},
+                  {term:"Swing Trade",color:T.purple2,def:"Medium-term trade lasting 1-7 days. You catch a price swing from Support to Resistance. This is the BEST type for you — you do not need to watch constantly, just check in once or twice a day."},
+                  {term:"Position Trade",color:T.purple2,def:"Long-term trade lasting weeks to months. You buy a coin you believe in and hold through short-term volatility. Good for high-credibility coins like BTC and ETH when the market regime is Green."},
+                ]
+              },
+              {
+                title:"🌍 Market Regime — Reading the Overall Market",
+                color:T.green,
+                items:[
+                  {term:"🟢 FULL SPEED",color:T.green,def:"Bitcoin is moving positively (under 2% either direction or slightly up). The overall market is calm and healthy. Good conditions for all trade types."},
+                  {term:"🟡 ELEVATED",color:T.gold,def:"Bitcoin has moved more than 2% in either direction. Things are more volatile than normal. Stick to high-confidence signals only and reduce position sizes slightly."},
+                  {term:"🟠 HIGH ALERT",color:"#f97316",def:"Bitcoin is down 4-8%. The whole market is likely selling off. Only trade if you have a very strong signal (score 80+). Consider sitting out and watching."},
+                  {term:"🔴 STOP TRADING",color:T.red,def:"Bitcoin is down more than 8% in 24 hours. This is a market-wide crash or panic. Stop all trading. Do not try to catch the bottom. Preserve your capital and come back when things stabilize."},
+                ]
+              },
+              {
+                title:"📓 Journal Terms — Tracking Your Trades",
+                color:T.blue2,
+                items:[
+                  {term:"Unrealized P&L",color:T.blue2,def:"Profit or Loss on a trade you still have open. It is not real yet — it goes up and down as the price moves. Only becomes real when you close the trade."},
+                  {term:"Realized P&L",color:T.blue2,def:"Profit or Loss you have actually locked in by closing a trade. This is real money gained or lost."},
+                  {term:"Win Rate",color:T.blue2,def:"The percentage of your closed trades that were profitable. A 50% win rate means half your trades make money. With a good R:R ratio of 2:1 you can be profitable even with a win rate below 50%."},
+                  {term:"Signal at Entry",color:T.blue2,def:"The signal verdict that was showing when you entered the trade. Over time the Performance tab uses this to tell you which signal types are most accurate for your trading style."},
+                  {term:"Paper Trading",color:T.purple2,def:"Trading with fake money using real signals. Everything works exactly like real trading except no actual money changes hands. Do at least 30 paper trades with positive results before switching to live trading."},
+                ]
+              },
+            ].map(section=>(
+              <div key={section.title} style={{marginBottom:20}}>
+                <div style={{fontSize:16,fontWeight:800,color:section.color,letterSpacing:"0.04em",marginBottom:14,paddingBottom:10,borderBottom:`2px solid ${section.color}30`}}>{section.title}</div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {section.items.map(item=>(
+                    <div key={item.term} style={{display:"flex",gap:14,padding:"14px 16px",background:T.card,border:`1px solid ${T.bdr}`,borderRadius:10,alignItems:"flex-start"}}>
+                      <div style={{minWidth:160,flexShrink:0}}>
+                        <span style={{fontSize:13,fontWeight:800,color:item.color,letterSpacing:"0.02em"}}>{item.term}</span>
+                      </div>
+                      <div style={{fontSize:14,color:T.text2,lineHeight:1.8,flex:1}}>{item.def}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+
+            <div style={{marginTop:24,padding:"18px 20px",background:`${T.blue}10`,border:`1px solid ${T.blue}30`,borderRadius:12}}>
+              <div style={{fontSize:15,fontWeight:800,color:T.blue2,marginBottom:8}}>💡 Golden Rules for Beginners</div>
+              {[
+                "Never risk more than 2% of your account on any single trade",
+                "Always set your Stop Loss BEFORE entering — not after",
+                "Only trade with the market regime is GREEN or YELLOW",
+                "Buy near Support levels, sell near Resistance levels",
+                "Complete the Pre-Session Check-In every day before trading",
+                "Do 30+ paper trades before switching to live money",
+                "A bad day happens — never chase losses with bigger bets",
+                "When in doubt, sit out — cash is also a position",
+              ].map((rule,i)=>(
+                <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
+                  <div style={{width:26,height:26,background:`linear-gradient(135deg,${T.blue3},${T.blue2})`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff",flexShrink:0}}>{i+1}</div>
+                  <div style={{fontSize:14,color:T.text2,lineHeight:1.7,paddingTop:3}}>{rule}</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
