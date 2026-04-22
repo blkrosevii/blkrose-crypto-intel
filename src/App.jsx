@@ -281,7 +281,7 @@ export default function App(){
       const res=await fetch("/api/chat",{
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
-          model:"claude-sonnet-4-5-20251001",max_tokens:1200,
+          model:"claude-sonnet-4-20250514",max_tokens:1200,
           messages:[{role:"user",content:`You are ROSE AI — a professional crypto analyst inside the ROSE CRYPTO INTEL DASHBOARD. User is a complete beginner with $${cfg.acct} capital doing swing trades. Mode: ${cfg.paper?"PAPER TRADING":"LIVE TRADING"}.
 
 Context: ${context}
