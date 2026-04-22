@@ -177,7 +177,55 @@ const StatCard=({label,value,color,sub})=>(
   </Card>
 );
 
-function SRVisual({price,sr}){
+function SRVisual({price,sr,symbol}){
+  if(!sr||!price) return null;
+  const levels=[
+    {key:"r2",label:"R2",desc:"Strong sell zone",   value:sr.r2,color:T.red,    pct:"+15%"},
+    {key:"r1",label:"R1",desc:"Take profit target", value:sr.r1,color:"#f97316",pct:"+7%"},
+    {key:"now",label:"NOW",desc:symbol||"Price",    value:price,color:T.blue2,  pct:""},
+    {key:"s1",label:"S1",desc:"Good entry zone",    value:sr.s1,color:"#4ade80",pct:"-6%"},
+    {key:"s2",label:"S2",desc:"Deeper entry zone",  value:sr.s2,color:T.green,  pct:"-14%"},
+  ];
+  const gain=((sr.r1-sr.s1)/sr.s1*100).toFixed(1);
+  return(
+    <div style={{background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+        <Lbl color={T.blue2} style={{marginBottom:0}}>Suggested Entry &amp; Exit Levels</Lbl>
+        <span style={{fontSize:11,color:T.text3,fontStyle:"italic"}}>Calculated — not historical</span>
+      </div>
+      <div style={{fontSize:12,color:T.text3,marginBottom:14,lineHeight:1.6,padding:"8px 10px",background:T.card,borderRadius:6,borderLeft:`3px solid ${T.blue}`}}>
+        These are calculated from current price, not chart history. For true S/R use the <span style={{color:T.blue2,fontWeight:700}}>Live Chart ↗</span> button to open TradingView.
+      </div>
+      {levels.map((lv,i)=>{
+        const isNow=lv.key==="now";
+        const isLast=i===levels.length-1;
+        return(
+          <div key={lv.key} style={{display:"flex",alignItems:"stretch",gap:12,minHeight:isNow?52:42}}>
+            <div style={{width:80,display:"flex",flexDirection:"column",alignItems:"flex-end",justifyContent:"center",flexShrink:0,padding:"4px 0"}}>
+              <div style={{fontSize:11,fontWeight:700,color:lv.color,letterSpacing:"0.06em"}}>{lv.label}</div>
+              <div style={{fontSize:isNow?16:13,fontWeight:isNow?900:700,color:lv.color,marginTop:1}}>{(typeof fu==="function"?fu(lv.value):lv.value)}</div>
+              {lv.pct&&<div style={{fontSize:10,color:T.text3,marginTop:1}}>{lv.pct}</div>}
+            </div>
+            <div style={{display:"flex",flexDirection:"column",alignItems:"center",width:20,flexShrink:0}}>
+              {i>0&&<div style={{width:2,flex:1,background:T.bdr}}/>}
+              <div style={{width:isNow?18:12,height:isNow?18:12,borderRadius:"50%",background:lv.color,border:isNow?`3px solid ${T.blue2}`:"none",flexShrink:0,boxShadow:`0 0 ${isNow?10:6}px ${lv.color}66`}}/>
+              {!isLast&&<div style={{width:2,flex:1,background:T.bdr}}/>}
+            </div>
+            <div style={{flex:1,display:"flex",alignItems:"center",padding:"4px 0"}}>
+              <div style={{width:"100%",padding:"8px 12px",background:`${lv.color}12`,border:`1px solid ${lv.color}30`,borderRadius:8,fontSize:isNow?14:12,fontWeight:isNow?800:500,color:lv.color}}>
+                {lv.desc}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      <div style={{marginTop:12,padding:"10px 14px",background:T.card,borderRadius:8,fontSize:13,color:T.text2,lineHeight:1.7,borderLeft:`3px solid ${T.blue}`}}>
+        <span style={{color:T.blue2,fontWeight:700}}>Suggested trade: </span>
+        Enter near S1 → take profit at R1 · Potential gain: <span style={{color:T.green,fontWeight:700}}>+{gain}%</span>
+      </div>
+    </div>
+  );
+}){
   if(!sr||!price) return null;
   const levels=[
     {key:"r2",label:"Resistance 2",value:sr.r2,color:T.red,    pct:"+15%"},
@@ -451,7 +499,7 @@ Reply in EXACTLY this format:
                 </div>
               )}
             </div>
-            {c.sr&&<SRVisual price={c.current_price} sr={c.sr}/>}
+            {c.sr&&<SRVisual price={c.current_price} sr={c.sr} symbol={c.symbol?.toUpperCase()}/>}
             {c.signals?.length>0&&(
               <div style={{marginBottom:14}}>
                 <Lbl>Signals Detected</Lbl>
@@ -610,8 +658,8 @@ Reply in EXACTLY this format:
                     <div key={l}><div style={{fontSize:13,color:T.text4,letterSpacing:"0.08em"}}>{l}</div><div style={{fontSize:16,fontWeight:700,color:pc(v)}}>{fp(v)}</div></div>
                   ))}
                   {btc?.sr&&<>
-                    <div><div style={{fontSize:13,color:T.text4,letterSpacing:"0.08em"}}>SUPPORT</div><div style={{fontSize:16,fontWeight:700,color:T.green}}>{fu(btc.sr.s1)}</div></div>
-                    <div><div style={{fontSize:13,color:T.text4,letterSpacing:"0.08em"}}>RESIST.</div><div style={{fontSize:16,fontWeight:700,color:T.red}}>{fu(btc.sr.r1)}</div></div>
+                    <div><div style={{fontSize:11,color:T.text4,letterSpacing:"0.06em"}}>S1 (calc.)</div><div style={{fontSize:16,fontWeight:700,color:T.green}}>{fu(btc.sr.s1)}</div></div>
+                    <div><div style={{fontSize:11,color:T.text4,letterSpacing:"0.06em"}}>R1 (calc.)</div><div style={{fontSize:16,fontWeight:700,color:T.red}}>{fu(btc.sr.r1)}</div></div>
                   </>}
                 </div>
               </Card>
@@ -999,7 +1047,7 @@ Reply in EXACTLY this format:
                 title:"📈 Support & Resistance — Your Father's Method",
                 color:T.green,
                 items:[
-                  {term:"What it is",color:T.green,def:"Support and Resistance are horizontal price levels where a coin has historically paused, bounced, or reversed. They are the foundation of technical analysis and used by professional traders worldwide."},
+                  {term:"What it is",color:T.green,def:"Support and Resistance are price levels where a coin has historically paused, bounced, or reversed. Your father draws these from real chart history — those are called key levels and they stay fixed. Our tool calculates suggested levels from the current price as a starting guide only. For true historical S/R, tap the Live Chart button and draw the lines yourself on TradingView."},
                   {term:"Support (green lines)",color:T.green,def:"A price floor. When a coin falls to this level, buyers historically step in and push the price back up. Think of it as a trampoline — price bounces off it. Buying near Support gives you a much better entry point."},
                   {term:"Resistance (red lines)",color:T.red,def:"A price ceiling. When a coin rises to this level, sellers historically step in and push the price back down. Think of it as a ceiling — price gets rejected. Selling near Resistance locks in profit before the drop."},
                   {term:"Support 1 (S1)",color:"#4ade80",def:"The nearest support level below the current price. Usually about 6% below current price. This is the most relevant level — a good potential entry point if price pulls back slightly."},
