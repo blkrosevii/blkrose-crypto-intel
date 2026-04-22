@@ -292,7 +292,40 @@ export default function App(){
   const [ciAns,setCiAns]=useState({});
   const [cfg,setCfg]=useState({acct:500,risk:2,maxPos:4,dllimit:3,minScore:60,paper:true});
   const [showAllAlerts,setShowAllAlerts]=useState(false);
+  const [watchMode,setWatchMode]=useState("semi"); // "active" or "semi"
+  const [notifEnabled,setNotifEnabled]=useState(false);
   const alertRef=useRef([]);
+
+  // ── Push Notifications ─────────────────────────────────────────────────
+  const requestNotifPermission = async () => {
+    if (!("Notification" in window)) {
+      alert("Your browser does not support push notifications. Try Chrome or Edge.");
+      return;
+    }
+    const perm = await Notification.requestPermission();
+    if (perm === "granted") {
+      setNotifEnabled(true);
+      new Notification("ROSE Crypto Intel", {
+        body: "Notifications enabled! You will be alerted when strong signals fire.",
+        icon: "/favicon.ico",
+      });
+    } else {
+      alert("Notification permission denied. Please enable it in your browser settings.");
+    }
+  };
+
+  const sendNotif = (title, body, color) => {
+    if (notifEnabled && Notification.permission === "granted") {
+      const n = new Notification(title, {
+        body,
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+        tag: title,
+        requireInteraction: true,
+      });
+      n.onclick = () => { window.focus(); n.close(); };
+    }
+  };
 
   const fetchCoins=useCallback(async(silent=false)=>{
     if(!silent) setStatus("loading");
@@ -333,6 +366,14 @@ export default function App(){
         const recent=alertRef.current.some(a=>a.id===c.id&&Date.now()-a.ts<180000);
         if(!recent){
           fired.push({...c,verdict,vColor,signals,score:getSignals(c).score,cred:c.cred||null,alertTime:nowT(),ts:Date.now()});
+          // Send push notification for strong signals
+          if(notifEnabled && Notification.permission==="granted"){
+            const title = verdict==="STRONG BUY"
+              ? "STRONG BUY — "+c.symbol?.toUpperCase()
+              : "TAKE PROFIT — "+c.symbol?.toUpperCase();
+            const body = fu_simple(c.current_price)+" · "+fp_simple(c.price_change_percentage_24h??0)+" today";
+            new Notification(title,{body,tag:c.id,requireInteraction:true});
+          }
           alertRef.current=[...alertRef.current.filter(a=>a.id!==c.id),{id:c.id,ts:Date.now()}];
         }
       }
@@ -345,14 +386,26 @@ export default function App(){
   const topBuys=enriched.filter(c=>c.verdict==="STRONG BUY"||c.verdict==="BUY").sort((a,b)=>b.score-a.score);
   const topSells=enriched.filter(c=>c.verdict==="TAKE PROFIT");
   const watchCoins=enriched.filter(c=>watchlist.includes(c.id));
+  const modeFilter = c => {
+    if(watchMode==="active") return true;
+    // Semi mode: only STRONG BUY/BUY with score 75+, no scalps, cred 3+
+    if(c.verdict==="STABLE") return true;
+    if(c.verdict==="STRONG BUY"||c.verdict==="BUY"){
+      return Math.min(Math.abs(c.score||0)*12,100)>=65 && (c.cred||3)>=3;
+    }
+    if(c.verdict==="TAKE PROFIT") return true;
+    return false;
+  };
   const browsed=enriched
-    .filter(c=>(activeCat==="all"||c.cat===activeCat)&&(!search||c.name?.toLowerCase().includes(search.toLowerCase())||c.symbol?.toLowerCase().includes(search.toLowerCase())))
+    .filter(c=>(activeCat==="all"||c.cat===activeCat)&&(!search||c.name?.toLowerCase().includes(search.toLowerCase())||c.symbol?.toLowerCase().includes(search.toLowerCase()))&&(watchMode==="active"||modeFilter(c)))
     .sort((a,b)=>(b.score||0)-(a.score||0));
   const openTrades=trades.filter(t=>!t.closed);
   const closedTrades=trades.filter(t=>t.closed);
   const dailyPnL=closedTrades.reduce((a,t)=>a+(t.pnl||0),0);
   const winRate=closedTrades.length?Math.round(closedTrades.filter(t=>t.pnl>0).length/closedTrades.length*100):0;
 
+  const fu_simple=(n)=>{if(!n||isNaN(n))return"—";if(n>=1e3)return"$"+(n/1e3).toFixed(1)+"K";if(n>=1)return"$"+n.toFixed(2);return"$"+n.toFixed(4);};
+  const fp_simple=(n)=>(n>0?"+":"")+Number(n).toFixed(2)+"%";
   const getRegime=()=>{const b=btc?.price_change_percentage_24h??0;if(b<-8)return{label:"🔴 STOP TRADING",color:T.red};if(b<-4)return{label:"🟠 HIGH ALERT",color:"#f97316"};if(Math.abs(b)>2)return{label:"🟡 ELEVATED",color:T.gold};return{label:"🟢 FULL SPEED",color:T.green};};
   const getWin=()=>{const h=new Date().getHours();if(h>=9&&h<=11)return{label:"🔥 US Market Open",color:T.green};if(h>=13&&h<=15)return{label:"⚡ US Afternoon",color:T.gold};if(h>=20&&h<=23)return{label:"🌏 Asia Open",color:T.blue2};if(h>=0&&h<=3)return{label:"🌏 Asia Peak",color:T.blue2};return{label:"💤 Low Activity",color:T.text3};};
   const regime=getRegime();
@@ -372,7 +425,7 @@ export default function App(){
         method:"POST",headers:{"Content-Type":"application/json"},
         body:JSON.stringify({
           model:"claude-3-5-sonnet-20241022",max_tokens:1200,
-          messages:[{role:"user",content:`You are ROSE AI — a professional crypto analyst inside the ROSE CRYPTO INTEL DASHBOARD. User is a complete beginner with $${cfg.acct} capital doing swing trades. Mode: ${cfg.paper?"PAPER TRADING":"LIVE TRADING"}.
+          messages:[{role:"user",content:`You are ROSE AI — a professional crypto analyst inside the ROSE CRYPTO INTEL DASHBOARD. User is a complete beginner with $${cfg.acct} capital doing swing trades. Mode: ${cfg.paper?"PAPER TRADING":"LIVE TRADING"} · Watch Mode: ${watchMode==="active"?"ACTIVE (at screen, all signals)":"SEMI (multitasking, best signals only)"}.
 
 Context: ${context}
 Account: $${cfg.acct} | Risk/trade: ${cfg.risk}% = $${(cfg.acct*cfg.risk/100).toFixed(2)} max
@@ -621,6 +674,25 @@ Reply in EXACTLY this format:
         {/* DASHBOARD */}
         {tab==="dashboard"&&(
           <div>
+            {/* Watch Mode Banner */}
+            {watchMode==="semi"&&(
+              <div style={{padding:"10px 16px",background:`${T.blue}10`,border:`1px solid ${T.blue}30`,borderRadius:10,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <span style={{fontSize:14,fontWeight:800,color:T.blue2}}>🌙 Semi-Watching Mode</span>
+                  <span style={{fontSize:13,color:T.text3,marginLeft:10}}>Showing only top signals (score 65+, credibility 3★+). Scalps hidden.</span>
+                </div>
+                <button onClick={()=>setWatchMode("active")} style={{padding:"5px 12px",background:`${T.green}15`,border:`1px solid ${T.green}50`,borderRadius:8,color:T.green,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>Switch to Active</button>
+              </div>
+            )}
+            {watchMode==="active"&&(
+              <div style={{padding:"10px 16px",background:`${T.green}08`,border:`1px solid ${T.green}25`,borderRadius:10,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <div>
+                  <span style={{fontSize:14,fontWeight:800,color:T.green}}>👁 Active Mode</span>
+                  <span style={{fontSize:13,color:T.text3,marginLeft:10}}>All signals shown including scalps. Stay focused — you are fully watching.</span>
+                </div>
+                <button onClick={()=>setWatchMode("semi")} style={{padding:"5px 12px",background:`${T.blue}15`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>Switch to Semi</button>
+              </div>
+            )}
             {!checkinDone?(
               <Card accent={T.blue} style={{marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
