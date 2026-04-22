@@ -557,14 +557,15 @@ Reply in EXACTLY this format:
               <Card style={{marginBottom:16,border:`2px solid ${T.red}`,background:`linear-gradient(135deg,${T.surf} 0%,#1a0a0a 100%)`,animation:"alertpulse 2s ease-in-out infinite"}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
                   <div style={{fontSize:17,fontWeight:800,color:"#fff",letterSpacing:"0.06em",display:"flex",alignItems:"center",gap:10}}>
-                  <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:T.red,borderRadius:"50%",fontSize:16,animation:"pulse 1.5s ease-in-out infinite"}}>⚡</span>
-                  <span>LIVE SIGNAL ALERTS <span style={{color:T.red,fontWeight:900}}>({alerts.length})</span></span>
-                </div>
-                <div style={{display:"flex",gap:10,alignItems:"center"}}>
-                  <button onClick={()=>setShowAllAlerts(p=>!p)} style={{padding:"7px 16px",background:showAllAlerts?`${T.red}30`:`${T.blue}12`,border:`1px solid ${showAllAlerts?T.red:T.blue2}`,borderRadius:8,color:showAllAlerts?T.red:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
-                    {showAllAlerts?"Show Less ▲":"View All "+alerts.length+" ▼"}
-                  </button>
-                  <button onClick={()=>runAI(alerts.slice(0,6),"All triggered alerts — which should I act on?")} style={{padding:"6px 14px",background:`${T.blue}12`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>⚡ AI Read All</button>
+                    <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:T.red,borderRadius:"50%",fontSize:16,animation:"pulse 1.5s ease-in-out infinite"}}>⚡</span>
+                    <span>LIVE SIGNAL ALERTS <span style={{color:T.red,fontWeight:900}}>({alerts.length})</span></span>
+                  </div>
+                  <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                    <button onClick={()=>setShowAllAlerts(p=>!p)} style={{padding:"7px 16px",background:showAllAlerts?`${T.red}30`:`${T.blue}12`,border:`1px solid ${showAllAlerts?T.red:T.blue2}`,borderRadius:8,color:showAllAlerts?T.red:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
+                      {showAllAlerts?"Show Less ▲":"View All "+alerts.length+" ▼"}
+                    </button>
+                    <button onClick={()=>runAI(alerts.slice(0,10),"All triggered alerts — which should I act on and why?")} style={{padding:"7px 14px",background:`${T.blue}12`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>⚡ AI Read All</button>
+                  </div>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
                   {(showAllAlerts?[...alerts].sort((a,b)=>{const order={"STRONG BUY":0,"TAKE PROFIT":1,"BUY":2};return (order[a.verdict]??3)-(order[b.verdict]??3);}):alerts.slice(0,6)).map(a=>(
