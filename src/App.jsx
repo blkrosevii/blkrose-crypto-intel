@@ -552,24 +552,24 @@ Reply in EXACTLY this format:
                 </div>
                   <button onClick={()=>runAI(alerts.slice(0,6),"All triggered alerts — which should I act on?")} style={{padding:"6px 14px",background:`${T.blue}12`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>⚡ AI Read All</button>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(260px,1fr))",gap:10}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
                   {alerts.slice(0,6).map(a=>(
                     <div key={`${a.id}-${a.ts}`} onClick={()=>{setSearch(a.symbol||"");setTab("signals");}} style={{padding:"16px 18px",background:a.verdict==="STRONG BUY"?`linear-gradient(135deg,#0a1a0a,#0f2a0f)`:`linear-gradient(135deg,#1a0808,#2a0a0a)`,border:`2px solid ${a.vColor}`,borderRadius:12,cursor:"pointer",boxShadow:`0 0 16px ${a.vColor}40`}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                        <div style={{display:"flex",alignItems:"center",gap:8}}>
-                          {a.image&&<img src={a.image} alt="" style={{width:24,height:24,borderRadius:"50%"}}/>}
-                          <div>
-                            <div style={{fontSize:22,fontWeight:900,color:"#fff",letterSpacing:"0.05em"}}>{a.symbol?.toUpperCase()}</div>
-                            <div style={{display:"flex",alignItems:"center",gap:6}}>
-                            <span style={{fontSize:11,fontWeight:800,padding:"2px 7px",borderRadius:20,background:T.red,color:"#fff",letterSpacing:"0.08em"}}>NEW</span>
-                            <span style={{fontSize:12,color:T.text3}}>{a.alertTime}</span>
+                      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                          <div style={{display:"flex",alignItems:"center",gap:8}}>
+                            {a.image&&<img src={a.image} alt="" style={{width:28,height:28,borderRadius:"50%",flexShrink:0}}/>}
+                            <div style={{fontSize:22,fontWeight:900,color:"#fff",letterSpacing:"0.04em"}}>{a.symbol?.toUpperCase()}</div>
+                            <Pill color={a.vColor}>{a.verdict}</Pill>
                           </div>
+                          <div style={{textAlign:"right",flexShrink:0}}>
+                            <div style={{fontSize:18,fontWeight:900,color:"#fff"}}>{fu(a.current_price)}</div>
+                            <div style={{fontSize:15,fontWeight:800,color:pc(a.price_change_percentage_24h)}}>{fp(a.price_change_percentage_24h)}</div>
                           </div>
-                          <Pill color={a.vColor}>{a.verdict}</Pill>
                         </div>
-                        <div style={{textAlign:"right"}}>
-                          <div style={{fontSize:20,fontWeight:900,color:"#fff"}}>{fu(a.current_price)}</div>
-                          <div style={{fontSize:16,fontWeight:800,color:pc(a.price_change_percentage_24h)}}>{fp(a.price_change_percentage_24h)}</div>
+                        <div style={{display:"flex",alignItems:"center",gap:6}}>
+                          <span style={{fontSize:11,fontWeight:800,padding:"2px 8px",borderRadius:20,background:T.red,color:"#fff",letterSpacing:"0.08em"}}>NEW</span>
+                          <span style={{fontSize:12,color:T.text3}}>{a.alertTime}</span>
                         </div>
                       </div>
                       {a.sr&&<div style={{fontSize:13,color:T.text3}}>S1: <span style={{color:T.green}}>{fu(a.sr.s1)}</span> · R1: <span style={{color:T.red}}>{fu(a.sr.r1)}</span></div>}
