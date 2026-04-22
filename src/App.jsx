@@ -157,6 +157,7 @@ const TABS=[
   {id:"performance",label:"Performance"},
   {id:"ai",         label:"AI Intel"},
   {id:"guide",      label:"📖 Guide"},
+  {id:"automation", label:"🤖 Auto"},
   {id:"settings",   label:"Settings"},
 ];
 
@@ -254,8 +255,12 @@ export default function App(){
   const [ciAns,setCiAns]=useState({});
   const [cfg,setCfg]=useState({acct:500,risk:2,maxPos:4,dllimit:3,minScore:60,paper:true});
   const [showAllAlerts,setShowAllAlerts]=useState(false);
-  const [watchMode,setWatchMode]=useState("semi"); // "active" or "semi"
+  const [watchMode,setWatchMode]=useState("semi");
   const [notifEnabled,setNotifEnabled]=useState(false);
+  const [autoMode,setAutoMode]=useState(false);
+  const [autoLog,setAutoLog]=useState([]);
+  const [autoRules,setAutoRules]=useState({minScore:75,minCred:3,maxPositions:2,tradeType:"swing"});
+  const [showAutoPanel,setShowAutoPanel]=useState(false);
   const alertRef=useRef([]);
 
   // ── Push Notifications ─────────────────────────────────────────────────
@@ -341,6 +346,83 @@ export default function App(){
       }
     });
     if(fired.length) setAlerts(prev=>[...fired,...prev].slice(0,30));
+  },[coins]);
+
+  // ── Auto Paper Trading Engine ─────────────────────────────────────────
+  useEffect(()=>{
+    if(!autoMode || watchMode!=="active" || !coins.length) return;
+    const openAutoTrades = autoLog.filter(t=>!t.closed).length;
+    if(openAutoTrades >= autoRules.maxPositions) return;
+
+    coins.forEach(c=>{
+      const sig = getSignals(c);
+      const cred = getCred(c.id);
+      const score = Math.min(Math.abs(sig.score||0)*12,100);
+
+      // Check all rules
+      if(sig.verdict !== "STRONG BUY") return;
+      if(score < autoRules.minScore) return;
+      if((cred.cred||0) < autoRules.minCred) return;
+      if(c.cat === "meme" || c.cat === "stable") return;
+
+      // Check not already in auto log (open position or traded in last 4 hours)
+      const recentlyTraded = autoLog.some(t=>
+        t.coinId===c.id && ((!t.closed) || (Date.now()-t.openTs < 14400000))
+      );
+      if(recentlyTraded) return;
+
+      // Auto log the paper trade
+      const entry = c.current_price;
+      const atr = entry * 0.04;
+      const tp = entry + atr * 2.5;
+      const sl = entry - atr * 1.0;
+      const rr = ((tp-entry)/(entry-sl)).toFixed(1);
+      const newTrade = {
+        id: Date.now() + Math.random(),
+        coinId: c.id,
+        symbol: c.symbol?.toUpperCase(),
+        name: c.name,
+        entry, tp, sl, rr,
+        size: 500 * 0.02, // 2% of default account
+        type: autoRules.tradeType,
+        openTime: nowT(),
+        openTs: Date.now(),
+        closed: false,
+        pnl: null,
+        paper: true,
+        auto: true,
+        signalScore: score,
+        signalAtEntry: sig.verdict,
+      };
+      setAutoLog(prev=>[newTrade,...prev].slice(0,50));
+
+      // Send notification
+      if(notifEnabled && Notification.permission==="granted"){
+        new Notification("🤖 AUTO PAPER TRADE — "+c.symbol?.toUpperCase(),{
+          body: "STRONG BUY · Score "+score+"/100 · Entry "+fu_simple(entry)+" · TP "+fu_simple(tp),
+          tag: "auto-"+c.id,
+          requireInteraction: true,
+        });
+      }
+    });
+  },[coins, autoMode, watchMode]);
+
+  // Auto-close trades that hit TP or SL
+  useEffect(()=>{
+    if(!autoLog.length) return;
+    setAutoLog(prev=>prev.map(t=>{
+      if(t.closed) return t;
+      const coin = coins.find(c=>c.id===t.coinId);
+      if(!coin) return t;
+      const cur = coin.current_price;
+      if(cur >= t.tp * 0.98){
+        return{...t,closed:true,exitPrice:t.tp,pnl:(t.tp-t.entry)*(t.size/t.entry),closeTime:nowT(),closeReason:"TP Hit ✅"};
+      }
+      if(cur <= t.sl * 1.02){
+        return{...t,closed:true,exitPrice:t.sl,pnl:(t.sl-t.entry)*(t.size/t.entry),closeTime:nowT(),closeReason:"SL Hit ❌"};
+      }
+      return t;
+    }));
   },[coins]);
 
   const enriched=coins.map(c=>({...c,...getSignals(c),...getCred(c.id)}));
@@ -604,6 +686,15 @@ Reply in EXACTLY this format:
               <div style={{padding:"6px 12px",borderRadius:20,fontSize:13,background:`${window_.color}12`,border:`1px solid ${window_.color}40`,color:window_.color}}>{window_.label}</div>
               {cfg.paper&&<div style={{padding:"5px 11px",borderRadius:20,fontSize:13,background:`${T.blue}12`,border:`1px solid ${T.blue}40`,color:T.blue2}}>📄 PAPER</div>}
               <div style={{padding:"5px 11px",borderRadius:20,fontSize:13,background:`${T.green}12`,border:`1px solid ${T.green}40`,color:T.green}}>● LIVE</div>
+              <button onClick={()=>{if(watchMode!=="active"&&!autoMode){alert("Switch to Active mode first.");return;}setAutoMode(p=>!p);}}
+                style={{padding:"5px 13px",borderRadius:20,fontSize:11,fontWeight:700,background:autoMode?`${T.green}20`:T.card,border:`1px solid ${autoMode?T.green:T.bdr}`,color:autoMode?T.green:T.text3,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                {autoMode?"🤖 AUTO ON":"🤖 AUTO OFF"}
+              </button>
+              <button onClick={notifEnabled?()=>setNotifEnabled(false):requestNotifPermission}
+                title={notifEnabled?"Notifications ON — click to disable":"Enable phone notifications"}
+                style={{padding:"5px 11px",borderRadius:20,fontSize:15,background:notifEnabled?`${T.green}15`:T.card,border:`1px solid ${notifEnabled?T.green:T.bdr}`,color:notifEnabled?T.green:T.text3,cursor:"pointer"}}>
+                {notifEnabled?"🔔":"🔕"}
+              </button>
               <button onClick={()=>{alertRef.current=[];fetchCoins();}} style={{padding:"6px 12px",background:T.card,border:`1px solid ${T.bdr}`,borderRadius:8,color:T.text3,cursor:"pointer",fontSize:14}}>↻</button>
             </div>
           </div>
@@ -1175,6 +1266,173 @@ Reply in EXACTLY this format:
                 <div key={i} style={{display:"flex",gap:12,alignItems:"flex-start",marginBottom:10}}>
                   <div style={{width:26,height:26,background:`linear-gradient(135deg,${T.blue3},${T.blue2})`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:800,color:"#fff",flexShrink:0}}>{i+1}</div>
                   <div style={{fontSize:14,color:T.text2,lineHeight:1.7,paddingTop:3}}>{rule}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* AUTOMATION */}
+        {tab==="automation"&&(
+          <div style={{maxWidth:860}}>
+            <div style={{fontSize:22,fontWeight:800,letterSpacing:"-0.02em",marginBottom:6}}>🤖 Automation Center</div>
+            <div style={{fontSize:14,color:T.text3,marginBottom:20,lineHeight:1.7}}>
+              Level 1 — Smart Alerts fire only when your rules are met. Level 2 — Auto Paper Trader logs trades automatically when you are in Active mode so you can see exactly what would have happened.
+            </div>
+
+            {/* Status card */}
+            <div style={{padding:"16px 20px",background:autoMode?`${T.green}10`:T.card,border:`2px solid ${autoMode?T.green:T.bdr}`,borderRadius:12,marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div>
+                <div style={{fontSize:16,fontWeight:800,color:autoMode?T.green:T.text3,marginBottom:4}}>
+                  {autoMode?"🟢 AUTOMATION RUNNING":"⚫ AUTOMATION PAUSED"}
+                </div>
+                <div style={{fontSize:13,color:T.text3}}>
+                  {autoMode
+                    ?"Scanning live signals every 90s · Auto-logging paper trades that meet your rules · Sending alerts"
+                    :"Switch to Active mode then enable to start auto paper trading"}
+                </div>
+              </div>
+              <button onClick={()=>{if(watchMode!=="active"&&!autoMode){alert("Switch to Active mode first.");return;}setAutoMode(p=>!p);}}
+                style={{padding:"10px 22px",background:autoMode?`${T.red}15`:`${T.green}15`,border:`1px solid ${autoMode?T.red:T.green}`,borderRadius:10,color:autoMode?T.red:T.green,cursor:"pointer",fontSize:14,fontWeight:800,fontFamily:"inherit",whiteSpace:"nowrap",marginLeft:16}}>
+                {autoMode?"⏸ Pause":"▶ Start"}
+              </button>
+            </div>
+
+            {watchMode!=="active"&&!autoMode&&(
+              <div style={{padding:"12px 16px",background:`${T.gold}10`,border:`1px solid ${T.gold}30`,borderRadius:10,marginBottom:16,fontSize:13,color:T.gold}}>
+                ⚠️ You must be in <strong>Active Mode</strong> to run automation. Switch the toggle in the top header first.
+              </div>
+            )}
+
+            {/* Rules */}
+            <div style={{background:T.card,border:`1px solid ${T.bdr}`,borderRadius:12,padding:"18px 20px",marginBottom:16}}>
+              <div style={{fontSize:15,fontWeight:800,color:T.blue2,marginBottom:16}}>⚙️ Automation Rules</div>
+              <div style={{fontSize:13,color:T.text3,marginBottom:16,lineHeight:1.6,padding:"10px 12px",background:T.surf,borderRadius:8,borderLeft:`3px solid ${T.blue}`}}>
+                The auto trader only enters a paper trade when ALL of these rules pass. This prevents it from chasing bad signals.
+              </div>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
+                {[
+                  {label:"Min Confidence Score",key:"minScore",min:60,max:95,step:5,desc:"Only trade signals scoring this or higher. Higher = fewer but better trades.",pct:false},
+                  {label:"Min Credibility Stars",key:"minCred",min:1,max:5,step:1,desc:"Skip meme coins and anonymous projects below this rating.",pct:false},
+                  {label:"Max Open Positions",key:"maxPositions",min:1,max:5,step:1,desc:"Stop opening new auto trades once this many are open.",pct:false},
+                ].map(({label,key,min,max,step,desc})=>(
+                  <div key={key} style={{background:T.surf,padding:"14px 16px",borderRadius:10}}>
+                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                      <div style={{fontSize:13,fontWeight:600,color:T.text2}}>{label}</div>
+                      <div style={{fontSize:16,fontWeight:800,color:T.blue2}}>{autoRules[key]}</div>
+                    </div>
+                    <input type="range" min={min} max={max} step={step} value={autoRules[key]}
+                      onChange={e=>setAutoRules(p=>({...p,[key]:parseInt(e.target.value)}))}
+                      style={{width:"100%",accentColor:T.blue2,marginBottom:6}}/>
+                    <div style={{fontSize:11,color:T.text3,lineHeight:1.5}}>{desc}</div>
+                  </div>
+                ))}
+                <div style={{background:T.surf,padding:"14px 16px",borderRadius:10}}>
+                  <div style={{fontSize:13,fontWeight:600,color:T.text2,marginBottom:8}}>Trade Type</div>
+                  <div style={{display:"flex",gap:8}}>
+                    {["scalp","swing","position"].map(t=>(
+                      <button key={t} onClick={()=>setAutoRules(p=>({...p,tradeType:t}))}
+                        style={{flex:1,padding:"8px",background:autoRules.tradeType===t?`${T.blue}22`:"transparent",border:`1px solid ${autoRules.tradeType===t?T.blue2:T.bdr}`,borderRadius:8,color:autoRules.tradeType===t?T.blue2:T.text3,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:autoRules.tradeType===t?700:400}}>
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{fontSize:11,color:T.text3,marginTop:8,lineHeight:1.5}}>Swing recommended for your lifestyle — no need to watch constantly.</div>
+                </div>
+              </div>
+              <div style={{marginTop:14,padding:"10px 14px",background:`${T.green}08`,border:`1px solid ${T.green}25`,borderRadius:8,fontSize:12,color:T.text3,lineHeight:1.6}}>
+                <span style={{color:T.green,fontWeight:700}}>Hard rules always applied: </span>
+                No meme coins · No stablecoins · No coins already in an open position · Signal must be STRONG BUY only · Active mode only
+              </div>
+            </div>
+
+            {/* Auto trade log */}
+            <div style={{background:T.card,border:`1px solid ${T.bdr}`,borderRadius:12,padding:"18px 20px",marginBottom:16}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+                <div style={{fontSize:15,fontWeight:800,color:T.text}}>📋 Auto Paper Trade Log ({autoLog.length})</div>
+                {autoLog.length>0&&<button onClick={()=>setAutoLog([])} style={{padding:"6px 12px",background:`${T.red}12`,border:`1px solid ${T.red}40`,borderRadius:8,color:T.red,cursor:"pointer",fontSize:12,fontFamily:"inherit"}}>Clear Log</button>}
+              </div>
+              {autoLog.length===0?(
+                <div style={{textAlign:"center",padding:"32px 0",color:T.text3,fontSize:13}}>
+                  No auto trades yet. Start automation in Active mode and qualifying STRONG BUY signals will be logged here automatically.
+                </div>
+              ):(
+                <div>
+                  {/* Stats */}
+                  {autoLog.filter(t=>t.closed).length>0&&(()=>{
+                    const closed=autoLog.filter(t=>t.closed);
+                    const wins=closed.filter(t=>t.pnl>0).length;
+                    const totalPnl=closed.reduce((a,t)=>a+(t.pnl||0),0);
+                    const wr=Math.round(wins/closed.length*100);
+                    return(
+                      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
+                        {[["Auto Trades",autoLog.length,T.blue2],["Win Rate",wr+"%",wr>=50?T.green:T.red],["Total P&L","$"+(totalPnl>=0?"+":"")+totalPnl.toFixed(2),totalPnl>=0?T.green:T.red],["Open",autoLog.filter(t=>!t.closed).length,T.gold]].map(([l,v,c])=>(
+                          <div key={l} style={{background:T.surf,padding:"12px 14px",borderRadius:8}}>
+                            <div style={{fontSize:11,color:T.text3,marginBottom:4,letterSpacing:"0.08em"}}>{l.toUpperCase()}</div>
+                            <div style={{fontSize:20,fontWeight:800,color:c}}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {/* Trade rows */}
+                  <div style={{overflowX:"auto"}}>
+                    <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
+                      <thead><tr style={{borderBottom:`1px solid ${T.bdr}`}}>
+                        {["Coin","Entry","TP","SL","R:R","Score","Status","P&L","Reason"].map(h=>(
+                          <th key={h} style={{padding:"8px 10px",textAlign:"left",fontSize:11,color:T.text3,fontWeight:600,letterSpacing:"0.06em"}}>{h.toUpperCase()}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {autoLog.map((t,i)=>{
+                          const coin=enriched.find(c=>c.id===t.coinId);
+                          const cur=coin?.current_price||t.entry;
+                          const unreal=t.closed?null:(cur-t.entry)*(t.size/t.entry);
+                          return(
+                            <tr key={i} style={{borderBottom:`1px solid ${T.surf}`}}>
+                              <td style={{padding:"10px 10px",fontWeight:800}}>{t.symbol}</td>
+                              <td style={{padding:"10px 10px"}}>{fu(t.entry)}</td>
+                              <td style={{padding:"10px 10px",color:T.green}}>{fu(t.tp)}</td>
+                              <td style={{padding:"10px 10px",color:T.red}}>{fu(t.sl)}</td>
+                              <td style={{padding:"10px 10px",color:T.blue2}}>{t.rr}:1</td>
+                              <td style={{padding:"10px 10px",color:T.gold}}>{t.signalScore}/100</td>
+                              <td style={{padding:"10px 10px"}}>
+                                {t.closed
+                                  ?<span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:t.pnl>0?`${T.green}18`:`${T.red}18`,border:`1px solid ${t.pnl>0?T.green:T.red}55`,color:t.pnl>0?T.green:T.red}}>{t.pnl>0?"WIN":"LOSS"}</span>
+                                  :<span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${T.gold}18`,border:`1px solid ${T.gold}55`,color:T.gold}}>OPEN</span>
+                                }
+                              </td>
+                              <td style={{padding:"10px 10px",fontWeight:700,color:t.closed?pc(t.pnl):pc(unreal)}}>
+                                {t.closed?(t.pnl>=0?"+":"")+fu(t.pnl):(unreal>=0?"+":"")+fu(unreal)+" *"}
+                              </td>
+                              <td style={{padding:"10px 10px",fontSize:11,color:T.text3}}>{t.closeReason||t.openTime}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{marginTop:10,fontSize:11,color:T.text3}}>* Unrealized P&L on open positions · All trades are paper (simulated) — no real money</div>
+                </div>
+              )}
+            </div>
+
+            {/* How it works */}
+            <div style={{background:T.card,border:`1px solid ${T.bdr}`,borderRadius:12,padding:"18px 20px"}}>
+              <div style={{fontSize:15,fontWeight:800,color:T.text,marginBottom:14}}>💡 How This Works</div>
+              {[
+                {step:"1",title:"Set your rules above",desc:"Adjust the minimum score, credibility, and max positions to match your risk tolerance. Higher score = fewer but higher quality trades."},
+                {step:"2",title:"Switch to Active mode",desc:"The automation only runs when you are intentionally in Active mode — never while you are semi-watching. This keeps you in control."},
+                {step:"3",title:"Hit Start",desc:"The engine scans all 300 live coins every 90 seconds. When a STRONG BUY passes all your rules it auto-logs a paper trade and sends you a notification."},
+                {step:"4",title:"Watch the results",desc:"Trades automatically close when price hits the Take Profit or Stop Loss level. After 20-30 trades you will see your real hypothetical win rate."},
+                {step:"5",title:"Use the data",desc:"Once you have real results — not guesses — you can decide whether to adjust the rules or eventually move to live trading with much more confidence."},
+              ].map(({step,title,desc})=>(
+                <div key={step} style={{display:"flex",gap:14,alignItems:"flex-start",marginBottom:14}}>
+                  <div style={{width:30,height:30,background:`linear-gradient(135deg,${T.blue3},${T.blue2})`,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:800,color:"#fff",flexShrink:0}}>{step}</div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:700,color:T.text,marginBottom:3}}>{title}</div>
+                    <div style={{fontSize:13,color:T.text3,lineHeight:1.6}}>{desc}</div>
+                  </div>
                 </div>
               ))}
             </div>
