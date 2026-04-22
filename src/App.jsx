@@ -202,6 +202,7 @@ export default function App(){
   const [showCI,setShowCI]=useState(false);
   const [ciAns,setCiAns]=useState({});
   const [cfg,setCfg]=useState({acct:500,risk:2,maxPos:4,dllimit:3,minScore:60,paper:true});
+  const [showAllAlerts,setShowAllAlerts]=useState(false);
   const alertRef=useRef([]);
 
   const fetchCoins=useCallback(async(silent=false)=>{
@@ -559,10 +560,14 @@ Reply in EXACTLY this format:
                   <span style={{display:"inline-flex",alignItems:"center",justifyContent:"center",width:32,height:32,background:T.red,borderRadius:"50%",fontSize:16,animation:"pulse 1.5s ease-in-out infinite"}}>⚡</span>
                   <span>LIVE SIGNAL ALERTS <span style={{color:T.red,fontWeight:900}}>({alerts.length})</span></span>
                 </div>
+                <div style={{display:"flex",gap:10,alignItems:"center"}}>
+                  <button onClick={()=>setShowAllAlerts(p=>!p)} style={{padding:"7px 16px",background:showAllAlerts?`${T.red}30`:`${T.blue}12`,border:`1px solid ${showAllAlerts?T.red:T.blue2}`,borderRadius:8,color:showAllAlerts?T.red:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
+                    {showAllAlerts?"Show Less ▲":"View All "+alerts.length+" ▼"}
+                  </button>
                   <button onClick={()=>runAI(alerts.slice(0,6),"All triggered alerts — which should I act on?")} style={{padding:"6px 14px",background:`${T.blue}12`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>⚡ AI Read All</button>
                 </div>
                 <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
-                  {alerts.slice(0,6).map(a=>(
+                  {(showAllAlerts?[...alerts].sort((a,b)=>{const order={"STRONG BUY":0,"TAKE PROFIT":1,"BUY":2};return (order[a.verdict]??3)-(order[b.verdict]??3);}):alerts.slice(0,6)).map(a=>(
                     <div key={`${a.id}-${a.ts}`} onClick={()=>{setSearch(a.symbol||"");setTab("signals");}} style={{padding:"16px 18px",background:a.verdict==="STRONG BUY"?`linear-gradient(135deg,#0a1a0a,#0f2a0f)`:`linear-gradient(135deg,#1a0808,#2a0a0a)`,border:`2px solid ${a.vColor}`,borderRadius:12,cursor:"pointer",boxShadow:`0 0 16px ${a.vColor}40`}}>
                       <div style={{display:"flex",flexDirection:"column",gap:8}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
