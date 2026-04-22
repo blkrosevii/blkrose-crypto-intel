@@ -84,6 +84,7 @@ const CRED_MAP={
   "cardano":      {cred:4,team:"Charles Hoskinson",backed:"IOHK",age:7,flags:[]},
   "dogecoin":     {cred:3,team:"Community",backed:"Elon influence",age:11,flags:["Meme-driven"]},
   "litecoin":     {cred:4,team:"Charlie Lee",backed:"Community",age:13,flags:[]},
+  "bitcoin-cash": {cred:3,team:"Community Fork",backed:"Community",age:7,flags:[]},
   "cosmos":       {cred:4,team:"Tendermint",backed:"ICF",age:6,flags:[]},
   "filecoin":     {cred:3,team:"Protocol Labs",backed:"a16z",age:4,flags:[]},
   "avalanche-2":  {cred:4,team:"Emin Gün Sirer",backed:"a16z, Polychain",age:4,flags:[]},
@@ -97,6 +98,7 @@ const CRED_MAP={
   "arbitrum":     {cred:4,team:"Offchain Labs",backed:"Lightspeed",age:2,flags:[]},
   "optimism":     {cred:4,team:"Optimism Foundation",backed:"a16z",age:2,flags:[]},
   "hedera":       {cred:4,team:"Leemon Baird",backed:"Google, IBM",age:5,flags:[]},
+  "hedera-hashgraph":{cred:4,team:"Leemon Baird",backed:"Google, IBM",age:5,flags:[]},
   "render-token": {cred:4,team:"Jules Urbach / OTOY",backed:"Multicoin",age:5,flags:[]},
   "fetch-ai":     {cred:3,team:"Humayun Sheikh",backed:"Outlier Ventures",age:5,flags:[]},
   "bittensor":    {cred:4,team:"Jacob Steeves",backed:"Community",age:3,flags:[]},
@@ -260,6 +262,10 @@ export default function App(){
   const [autoMode,setAutoMode]=useState(false);
   const [autoLog,setAutoLog]=useState([]);
   const [autoRules,setAutoRules]=useState({minScore:75,minCred:3,maxPositions:2,tradeType:"swing"});
+  const [customCoins,setCustomCoins]=useState([]); // user-added coins by CoinGecko ID
+  const [customSearch,setCustomSearch]=useState("");
+  const [customResults,setCustomResults]=useState([]);
+  const [customSearching,setCustomSearching]=useState(false);
   const [showAutoPanel,setShowAutoPanel]=useState(false);
   const alertRef=useRef([]);
 
@@ -297,11 +303,18 @@ export default function App(){
   const fetchCoins=useCallback(async(silent=false)=>{
     if(!silent) setStatus("loading");
     try{
-      const pages=await Promise.all([1,2,3].map(p=>
-        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=${p}&sparkline=false&price_change_percentage=1h,24h,7d`)
-          .then(r=>r.ok?r.json():[])
-      ));
-      const all=pages.flat().map(c=>({...c,cat:getCat(c.id)}));
+      const customIds = customCoins.map(c=>c.id).join(",");
+      const [p1,p2,p3,customData] = await Promise.all([
+        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
+        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=2&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
+        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=3&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
+        customIds ? fetch(`${GC}/coins/markets?vs_currency=usd&ids=${customIds}&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]) : Promise.resolve([]),
+      ]);
+      const pages = [p1,p2,p3];
+      // Merge custom coins in, deduplicating
+      const standardIds = new Set([...p1,...p2,...p3].map(c=>c.id));
+      const extraCustom = customData.filter(c=>!standardIds.has(c.id));
+      const all=[...pages.flat(),...extraCustom].map(c=>({...c,cat:getCat(c.id),isCustom:extraCustom.some(x=>x.id===c.id)}));
       if(!all.length) throw new Error("empty");
       setCoins(all);
       setStatus("live");
@@ -448,6 +461,38 @@ export default function App(){
   const dailyPnL=closedTrades.reduce((a,t)=>a+(t.pnl||0),0);
   const winRate=closedTrades.length?Math.round(closedTrades.filter(t=>t.pnl>0).length/closedTrades.length*100):0;
 
+  // ── Custom Coin Search ────────────────────────────────────────────────
+  const searchCustomCoin = async (q) => {
+    if(!q || q.length < 2) return;
+    setCustomSearching(true);
+    try {
+      const res = await fetch(`https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      setCustomResults((data.coins||[]).slice(0,8).map(c=>({
+        id: c.id,
+        symbol: c.symbol?.toUpperCase(),
+        name: c.name,
+        thumb: c.thumb,
+        market_cap_rank: c.market_cap_rank,
+      })));
+    } catch(e) {
+      setCustomResults([]);
+    }
+    setCustomSearching(false);
+  };
+
+  const addCustomCoin = (coin) => {
+    if(!customCoins.find(c=>c.id===coin.id)){
+      setCustomCoins(prev=>[...prev,coin]);
+    }
+    setCustomSearch("");
+    setCustomResults([]);
+  };
+
+  const removeCustomCoin = (id) => {
+    setCustomCoins(prev=>prev.filter(c=>c.id!==id));
+  };
+
   const fu_simple=(n)=>{if(!n||isNaN(n))return"—";if(n>=1e3)return"$"+(n/1e3).toFixed(1)+"K";if(n>=1)return"$"+n.toFixed(2);return"$"+n.toFixed(4);};
   const fp_simple=(n)=>(n>0?"+":"")+Number(n).toFixed(2)+"%";
   const getRegime=()=>{const b=btc?.price_change_percentage_24h??0;if(b<-8)return{label:"🔴 STOP TRADING",color:T.red};if(b<-4)return{label:"🟠 HIGH ALERT",color:"#f97316"};if(Math.abs(b)>2)return{label:"🟡 ELEVATED",color:T.gold};return{label:"🟢 FULL SPEED",color:T.green};};
@@ -545,6 +590,7 @@ Reply in EXACTLY this format:
               <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:3}}>
                 <span style={{fontSize:18,fontWeight:800,color:T.text}}>{c.symbol?.toUpperCase()}</span>
                 {c.market_cap_rank&&<span style={{fontSize:13,color:T.text4,background:T.card,padding:"1px 6px",borderRadius:4}}>#{c.market_cap_rank}</span>}
+                {c.isCustom&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:4,background:`${T.purple2}18`,border:`1px solid ${T.purple2}40`,color:T.purple2}}>CUSTOM</span>}
                 <Pill color={c.vColor||T.gold}>{c.verdict||"WATCH"}</Pill>
                 {c.sr&&<Pill color={T.blue2} size={10}>S/R</Pill>}
               </div>
@@ -861,6 +907,50 @@ Reply in EXACTLY this format:
         {/* SIGNALS */}
         {tab==="signals"&&(
           <div>
+            {/* Custom coin add section */}
+            <div style={{background:T.card,border:`1px solid ${T.blue}30`,borderRadius:10,padding:"14px 16px",marginBottom:14}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <div style={{fontSize:14,fontWeight:700,color:T.blue2}}>➕ Add Any Coin to Your Scanner</div>
+                {customCoins.length>0&&<span style={{fontSize:12,color:T.text3}}>{customCoins.length} custom coin{customCoins.length>1?"s":""} added</span>}
+              </div>
+              <div style={{display:"flex",gap:8,marginBottom:customResults.length>0||customSearching?10:0}}>
+                <input value={customSearch} onChange={e=>setCustomSearch(e.target.value)}
+                  onKeyDown={e=>{if(e.key==="Enter")searchCustomCoin(customSearch);}}
+                  placeholder="Search any coin by name or ticker — e.g. Kaspa, WIF, Render..."
+                  style={{flex:1,padding:"9px 14px",background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:8,color:T.text,fontSize:13,fontFamily:"inherit",outline:"none"}}/>
+                <button onClick={()=>searchCustomCoin(customSearch)}
+                  style={{padding:"9px 18px",background:`${T.blue}15`,border:`1px solid ${T.blue}`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                  {customSearching?"Searching...":"Search"}
+                </button>
+              </div>
+              {customResults.length>0&&(
+                <div style={{background:T.surf,borderRadius:8,overflow:"hidden",marginBottom:10}}>
+                  {customResults.map(r=>(
+                    <div key={r.id} onClick={()=>addCustomCoin(r)}
+                      style={{display:"flex",alignItems:"center",gap:10,padding:"10px 14px",cursor:"pointer",borderBottom:`1px solid ${T.bdr}`}}>
+                      {r.thumb&&<img src={r.thumb} alt="" style={{width:24,height:24,borderRadius:"50%",flexShrink:0}}/>}
+                      <div style={{flex:1}}>
+                        <span style={{fontSize:14,fontWeight:700,color:T.text}}>{r.symbol}</span>
+                        <span style={{fontSize:12,color:T.text3,marginLeft:8}}>{r.name}</span>
+                        {r.market_cap_rank&&<span style={{fontSize:11,color:T.text4,marginLeft:6}}>#{r.market_cap_rank}</span>}
+                      </div>
+                      <span style={{fontSize:12,color:T.green,fontWeight:700}}>+ Add</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {customCoins.length>0&&(
+                <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                  {customCoins.map(c=>(
+                    <div key={c.id} style={{display:"flex",alignItems:"center",gap:6,padding:"4px 10px",background:`${T.blue}12`,border:`1px solid ${T.blue}30`,borderRadius:20}}>
+                      {c.thumb&&<img src={c.thumb} alt="" style={{width:16,height:16,borderRadius:"50%"}}/>}
+                      <span style={{fontSize:12,color:T.blue2,fontWeight:600}}>{c.symbol}</span>
+                      <button onClick={()=>removeCustomCoin(c.id)} style={{background:"none",border:"none",color:T.text3,cursor:"pointer",fontSize:14,lineHeight:1,padding:0}}>×</button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
             <div style={{display:"flex",gap:10,marginBottom:16,flexWrap:"wrap",alignItems:"center"}}>
               <input value={search} onChange={e=>setSearch(e.target.value)} placeholder={`Search ${coins.length} live coins...`}
                 style={{padding:"10px 16px",background:T.card,border:`1px solid ${T.bdr}`,borderRadius:10,color:T.text,fontSize:15,fontFamily:"inherit",outline:"none",minWidth:240,flex:1,maxWidth:320}}/>
