@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) {
-    return res.status(500).json({ error: "NO API KEY FOUND IN ENVIRONMENT" });
+    return res.status(500).json({ error: "NO API KEY FOUND" });
   }
 
   try {
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
-        model: "claude-3-5-sonnet-20241022",
+        model: "claude-haiku-4-5-20251001",
         max_tokens: max_tokens || 1200,
         messages: messages,
       }),
