@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;
   if (!ANTHROPIC_KEY) {
-    return res.status(500).json({ error: "API key not configured" });
+    return res.status(500).json({ error: "NO API KEY FOUND IN ENVIRONMENT" });
   }
 
   try {
@@ -15,7 +15,7 @@ export default async function handler(req, res) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-api-key": ANTHROPIC_KEY,
+        "x-api-key": ANTHROPIC_KEY.trim(),
         "anthropic-version": "2023-06-01",
       },
       body: JSON.stringify({
@@ -29,13 +29,12 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data.error?.message || "Anthropic API error",
-        type: data.error?.type,
+        error: "ANTHROPIC ERROR: " + JSON.stringify(data),
       });
     }
 
     return res.status(200).json(data);
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: "FETCH ERROR: " + error.message });
   }
 }
