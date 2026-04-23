@@ -72,7 +72,7 @@ function getSignals(c) {
   return {verdict,vColor,signals:s,score:buy-sel,vm,sr:getSR(c.current_price)};
 }
 
-const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","render-token":"ai","fetch-ai":"ai",bittensor:"ai","the-graph":"ai","shiba-inu":"meme",pepe:"meme","dogwifcoin":"meme",bonk:"meme",floki:"meme","pax-gold":"rwa",maker:"rwa","ondo-finance":"rwa",tether:"stable","usd-coin":"stable",dai:"stable"};
+const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","hedera-hashgraph":"altcoin","render-token":"ai","fetch-ai":"ai",bittensor:"ai","the-graph":"ai","shiba-inu":"meme",pepe:"meme","dogwifcoin":"meme",bonk:"meme",floki:"meme","pax-gold":"rwa",maker:"rwa","ondo-finance":"rwa",tether:"stable","usd-coin":"stable",dai:"stable"};
 const getCat=id=>CAT_MAP[id]||"altcoin";
 
 const CRED_MAP={
@@ -85,6 +85,22 @@ const CRED_MAP={
   "dogecoin":     {cred:3,team:"Community",backed:"Elon influence",age:11,flags:["Meme-driven"]},
   "litecoin":     {cred:4,team:"Charlie Lee",backed:"Community",age:13,flags:[]},
   "bitcoin-cash": {cred:3,team:"Community Fork",backed:"Community",age:7,flags:[]},
+  "hedera-hashgraph":{cred:4,team:"Leemon Baird",backed:"Google, IBM",age:5,flags:[]},
+  "algorand":     {cred:4,team:"Silvio Micali (MIT)",backed:"Various",age:5,flags:[]},
+  "kaspa":        {cred:3,team:"Yonatan Sompolinsky",backed:"Community",age:3,flags:[]},
+  "celestia":     {cred:4,team:"Mustafa Al-Bassam",backed:"Bain Capital, Polychain",age:2,flags:["Young"]},
+  "stacks":       {cred:3,team:"Muneeb Ali",backed:"Y Combinator",age:5,flags:[]},
+  "immutable-x":  {cred:3,team:"James Ferguson",backed:"Sequoia",age:3,flags:[]},
+  "dydx":         {cred:3,team:"Antonio Juliano",backed:"a16z",age:4,flags:[]},
+  "aave":         {cred:4,team:"Stani Kulechov",backed:"Institutional",age:5,flags:[]},
+  "lido-dao":     {cred:4,team:"Jordan Fish",backed:"Paradigm",age:3,flags:[]},
+  "ens":          {cred:4,team:"Nick Johnson",backed:"Ethereum Foundation",age:3,flags:[]},
+  "oasis-network":{cred:3,team:"Dawn Song (UC Berkeley)",backed:"a16z",age:4,flags:[]},
+  "thorchain":    {cred:3,team:"Community",backed:"Multicoin",age:4,flags:["Multiple hacks history"]},
+  "gmx":          {cred:3,team:"Anonymous",backed:"Various",age:3,flags:[]},
+  "pendle":       {cred:3,team:"TN Lee",backed:"Mechanism Capital",age:2,flags:[]},
+  "akash-network":{cred:3,team:"Greg Osuri",backed:"Multicoin",age:4,flags:[]},
+  "singularitynet":{cred:3,team:"Ben Goertzel",backed:"Outlier Ventures",age:5,flags:[]},
   "cosmos":       {cred:4,team:"Tendermint",backed:"ICF",age:6,flags:[]},
   "filecoin":     {cred:3,team:"Protocol Labs",backed:"a16z",age:4,flags:[]},
   "avalanche-2":  {cred:4,team:"Emin Gün Sirer",backed:"a16z, Polychain",age:4,flags:[]},
@@ -262,7 +278,12 @@ export default function App(){
   const [autoMode,setAutoMode]=useState(false);
   const [autoLog,setAutoLog]=useState([]);
   const [autoRules,setAutoRules]=useState({minScore:75,minCred:3,maxPositions:2,tradeType:"swing"});
-  const [customCoins,setCustomCoins]=useState([]); // user-added coins by CoinGecko ID
+  const [customCoins,setCustomCoins]=useState(()=>{
+    try{
+      const saved=localStorage.getItem("rose_custom_coins");
+      return saved?JSON.parse(saved):[];
+    }catch{return[];}
+  });
   const [customSearch,setCustomSearch]=useState("");
   const [customResults,setCustomResults]=useState([]);
   const [customSearching,setCustomSearching]=useState(false);
@@ -303,7 +324,27 @@ export default function App(){
   const fetchCoins=useCallback(async(silent=false)=>{
     if(!silent) setStatus("loading");
     try{
-      const customIds = customCoins.map(c=>c.id).join(",");
+      // VIP list — high credibility coins always fetched regardless of rank
+      const permanentIds = [
+        "hedera-hashgraph",      // HBAR  — backed by Google & IBM, enterprise blockchain
+        "algorand",              // ALGO  — MIT professor, pure proof-of-stake
+        "kaspa",                 // KAS   — fast proof-of-work, strong community
+        "celestia",              // TIA   — modular blockchain, strong institutional backing
+        "stacks",                // STX   — brings smart contracts to Bitcoin
+        "immutable-x",           // IMX   — Ethereum L2 for NFT gaming, Sequoia backed
+        "dydx",                  // DYDX  — largest decentralized derivatives exchange
+        "aave",                  // AAVE  — leading DeFi lending, billions in TVL
+        "lido-dao",              // LDO   — largest ETH staking protocol
+        "ens",                   // ENS   — Ethereum Name Service, foundation backed
+        "oasis-network",         // ROSE  — privacy blockchain, UC Berkeley team
+        "thorchain",             // RUNE  — cross-chain DEX, unique utility
+        "gmx",                   // GMX   — decentralized perps, strong revenue
+        "pendle",                // PENDLE— yield trading, growing fast
+        "akash-network",         // AKT   — decentralized cloud computing
+        "singularitynet",        // AGIX  — AI marketplace, Ben Goertzel
+      ];
+      const allExtraIds = [...new Set([...permanentIds,...customCoins.map(c=>c.id)])];
+      const customIds = allExtraIds.join(",");
       const [p1,p2,p3,customData] = await Promise.all([
         fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
         fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=2&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
@@ -483,14 +524,18 @@ export default function App(){
 
   const addCustomCoin = (coin) => {
     if(!customCoins.find(c=>c.id===coin.id)){
-      setCustomCoins(prev=>[...prev,coin]);
+      const updated=[...customCoins,coin];
+      setCustomCoins(updated);
+      try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
     }
     setCustomSearch("");
     setCustomResults([]);
   };
 
   const removeCustomCoin = (id) => {
-    setCustomCoins(prev=>prev.filter(c=>c.id!==id));
+    const updated=customCoins.filter(c=>c.id!==id);
+    setCustomCoins(updated);
+    try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
   };
 
   const fu_simple=(n)=>{if(!n||isNaN(n))return"—";if(n>=1e3)return"$"+(n/1e3).toFixed(1)+"K";if(n>=1)return"$"+n.toFixed(2);return"$"+n.toFixed(4);};
@@ -722,7 +767,7 @@ Reply in EXACTLY this format:
                   ROSE <span style={{color:T.blue2}}>CRYPTO INTEL</span>
                 </div>
                 <div style={{fontSize:13,color:T.text3,letterSpacing:"0.12em",marginTop:2}}>
-                  DASHBOARD · {coins.length} LIVE COINS · {lastFetch||"..."}
+                  DASHBOARD · {coins.length}+ LIVE COINS · {lastFetch||"..."}
                 </div>
               </div>
             </div>
@@ -732,6 +777,10 @@ Reply in EXACTLY this format:
               <div style={{padding:"6px 12px",borderRadius:20,fontSize:13,background:`${window_.color}12`,border:`1px solid ${window_.color}40`,color:window_.color}}>{window_.label}</div>
               {cfg.paper&&<div style={{padding:"5px 11px",borderRadius:20,fontSize:13,background:`${T.blue}12`,border:`1px solid ${T.blue}40`,color:T.blue2}}>📄 PAPER</div>}
               <div style={{padding:"5px 11px",borderRadius:20,fontSize:13,background:`${T.green}12`,border:`1px solid ${T.green}40`,color:T.green}}>● LIVE</div>
+              <button onClick={()=>setWatchMode(p=>p==="active"?"semi":"active")}
+                style={{padding:"5px 13px",borderRadius:20,fontSize:11,fontWeight:700,background:watchMode==="active"?`${T.green}20`:T.card,border:`1px solid ${watchMode==="active"?T.green:T.blue}`,color:watchMode==="active"?T.green:T.blue2,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
+                {watchMode==="active"?"👁 ACTIVE":"🌙 SEMI"}
+              </button>
               <button onClick={()=>{if(watchMode!=="active"&&!autoMode){alert("Switch to Active mode first.");return;}setAutoMode(p=>!p);}}
                 style={{padding:"5px 13px",borderRadius:20,fontSize:11,fontWeight:700,background:autoMode?`${T.green}20`:T.card,border:`1px solid ${autoMode?T.green:T.bdr}`,color:autoMode?T.green:T.text3,cursor:"pointer",fontFamily:"inherit",whiteSpace:"nowrap"}}>
                 {autoMode?"🤖 AUTO ON":"🤖 AUTO OFF"}
@@ -773,25 +822,16 @@ Reply in EXACTLY this format:
         {/* DASHBOARD */}
         {tab==="dashboard"&&(
           <div>
-            {/* Watch Mode Banner */}
-            {watchMode==="semi"&&(
-              <div style={{padding:"10px 16px",background:`${T.blue}10`,border:`1px solid ${T.blue}30`,borderRadius:10,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <span style={{fontSize:14,fontWeight:800,color:T.blue2}}>🌙 Semi-Watching Mode</span>
-                  <span style={{fontSize:13,color:T.text3,marginLeft:10}}>Showing only top signals (score 65+, credibility 3★+). Scalps hidden.</span>
-                </div>
-                <button onClick={()=>setWatchMode("active")} style={{padding:"5px 12px",background:`${T.green}15`,border:`1px solid ${T.green}50`,borderRadius:8,color:T.green,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>Switch to Active</button>
-              </div>
-            )}
-            {watchMode==="active"&&(
-              <div style={{padding:"10px 16px",background:`${T.green}08`,border:`1px solid ${T.green}25`,borderRadius:10,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <div>
-                  <span style={{fontSize:14,fontWeight:800,color:T.green}}>👁 Active Mode</span>
-                  <span style={{fontSize:13,color:T.text3,marginLeft:10}}>All signals shown including scalps. Stay focused — you are fully watching.</span>
-                </div>
-                <button onClick={()=>setWatchMode("semi")} style={{padding:"5px 12px",background:`${T.blue}15`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:12,fontFamily:"inherit",fontWeight:700,whiteSpace:"nowrap"}}>Switch to Semi</button>
-              </div>
-            )}
+            {/* Mode banner — compact */}
+            <div style={{padding:"8px 14px",background:watchMode==="active"?`${T.green}08`:`${T.blue}08`,border:`1px solid ${watchMode==="active"?T.green+"25":T.blue+"25"}`,borderRadius:8,marginBottom:12,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <span style={{fontSize:13,color:watchMode==="active"?T.green:T.blue2,fontWeight:600}}>
+                {watchMode==="active"?"👁 Active Mode — all signals visible":"🌙 Semi Mode — top signals only (65+, 3★+)"}
+              </span>
+              <button onClick={()=>setWatchMode(p=>p==="active"?"semi":"active")}
+                style={{padding:"3px 10px",background:"transparent",border:`1px solid ${watchMode==="active"?T.green+"50":T.blue+"50"}`,borderRadius:20,color:watchMode==="active"?T.green:T.blue2,cursor:"pointer",fontSize:11,fontFamily:"inherit",fontWeight:600}}>
+                Switch
+              </button>
+            </div>
             {!checkinDone?(
               <Card accent={T.blue} style={{marginBottom:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
@@ -801,12 +841,12 @@ Reply in EXACTLY this format:
                 <button onClick={()=>setShowCI(true)} style={{padding:"10px 20px",background:`linear-gradient(135deg,${T.blue3},${T.blue2})`,border:"none",borderRadius:10,color:"white",cursor:"pointer",fontSize:15,fontWeight:700,whiteSpace:"nowrap",marginLeft:16}}>Start →</button>
               </Card>
             ):(
-              <Card accent={checkinScore>=67?T.green:T.gold} style={{marginBottom:16}}>
-                <div style={{fontSize:16,fontWeight:700,color:checkinScore>=67?T.green:T.gold}}>
-                  {checkinScore>=67?"✅ Good to trade today":"⚠️ Consider paper trading only"} — Mental score: {checkinScore}/100
-                </div>
-                <div style={{fontSize:14,color:T.text3,marginTop:4}}>{checkinScore>=67?"Emotional state looks good. Follow your rules and trade your plan.":"Elevated stress. Stick to high-confidence signals only."}</div>
-              </Card>
+              <div style={{padding:"8px 14px",background:checkinScore>=67?`${T.green}08`:`${T.gold}08`,border:`1px solid ${checkinScore>=67?T.green+"30":T.gold+"30"}`,borderRadius:8,marginBottom:8,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:13,color:checkinScore>=67?T.green:T.gold,fontWeight:600}}>
+                  {checkinScore>=67?"✅ Good to trade — mental score "+checkinScore+"/100":"⚠️ Paper trading only — mental score "+checkinScore+"/100"}
+                </span>
+                <button onClick={()=>setCheckinDone(false)} style={{padding:"2px 8px",background:"transparent",border:`1px solid ${T.bdr}`,borderRadius:20,color:T.text3,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>redo</button>
+              </div>
             )}
             <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:16}}>
               <StatCard label="Account"    value={`$${cfg.acct.toLocaleString()}`} color={T.blue2}/>
