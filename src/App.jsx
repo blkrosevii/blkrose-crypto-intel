@@ -958,17 +958,17 @@ Reply in EXACTLY this format:
               <Card style={{padding:"16px 18px"}}>
                 <Lbl>{cfg.paper?"Paper Account":"Live Account"}</Lbl>
                 <div style={{fontSize:26,fontWeight:800,color:combinedAccount>=cfg.acct?T.green:T.red,letterSpacing:"-0.02em",lineHeight:1}}>${combinedAccount.toFixed(2)}</div>
-                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Started: ${cfg.acct} · Auto P&L: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}{fu(autoPnL)}</span></div>}
+                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Started: ${cfg.acct} · Auto P&L: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}${Math.abs(autoPnL).toFixed(2)}</span></div>}
               </Card>
               <Card style={{padding:"16px 18px"}}>
                 <Lbl>Daily P&L</Lbl>
-                <div style={{fontSize:26,fontWeight:800,color:pc(combinedPnL),letterSpacing:"-0.02em",lineHeight:1}}>{combinedPnL>=0?"+":""}{fu(combinedPnL)}</div>
-                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: {fu(dailyPnL)} · Auto: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}{fu(autoPnL)}</span></div>}
+                <div style={{fontSize:26,fontWeight:800,color:pc(combinedPnL),letterSpacing:"-0.02em",lineHeight:1}}>{combinedPnL>=0?"+":""}${Math.abs(combinedPnL).toFixed(2)}</div>
+                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: ${Math.abs(dailyPnL).toFixed(2)} · Auto: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}${Math.abs(autoPnL).toFixed(2)}</span></div>}
               </Card>
               <Card style={{padding:"16px 18px"}}>
                 <Lbl>Open Trades</Lbl>
                 <div style={{fontSize:26,fontWeight:800,color:T.blue2,letterSpacing:"-0.02em",lineHeight:1}}>{openTrades.length+autoOpenTrades.length}<span style={{fontSize:13,color:T.text3,fontWeight:400}}> / {cfg.maxPos}</span></div>
-                {autoOpenTrades.length>0&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: {openTrades.length} · Auto: {autoOpenTrades.length} · Unrealized: <span style={{color:pc(autoUnrealizedPnL)}}>{autoUnrealizedPnL>=0?"+":""}{fu(autoUnrealizedPnL)}</span></div>}
+                {autoOpenTrades.length>0&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: {openTrades.length} · Auto: {autoOpenTrades.length} · Unrealized: <span style={{color:pc(autoUnrealizedPnL)}}>{autoUnrealizedPnL>=0?"+":""}${Math.abs(autoUnrealizedPnL).toFixed(2)}</span></div>}
               </Card>
               <StatCard label="Strong Buys" value={topBuys.filter(c=>c.verdict==="STRONG BUY").length} color={T.green}/>
               <StatCard label="Alerts" value={alerts.length} color={T.blue2}/>
@@ -1616,7 +1616,7 @@ Reply in EXACTLY this format:
                     const wr=Math.round(wins/closed.length*100);
                     return(
                       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:14}}>
-                        {[["Auto Trades",autoLog.length,T.blue2],["Win Rate",wr+"%",wr>=50?T.green:T.red],["Total P&L","$"+(totalPnl>=0?"+":"")+totalPnl.toFixed(2),totalPnl>=0?T.green:T.red],["Open",autoLog.filter(t=>!t.closed).length,T.gold]].map(([l,v,c])=>(
+                        {[["Auto Trades",autoLog.length,T.blue2],["Win Rate",wr+"%",wr>=50?T.green:T.red],["Total P&L",(totalPnl>=0?"+":"")+"$"+Math.abs(totalPnl).toFixed(2),totalPnl>=0?T.green:T.red],["Open",autoLog.filter(t=>!t.closed).length,T.gold]].map(([l,v,c])=>(
                           <div key={l} style={{background:T.surf,padding:"12px 14px",borderRadius:8}}>
                             <div style={{fontSize:11,color:T.text3,marginBottom:4,letterSpacing:"0.08em"}}>{l.toUpperCase()}</div>
                             <div style={{fontSize:20,fontWeight:800,color:c}}>{v}</div>
@@ -1661,7 +1661,9 @@ Reply in EXACTLY this format:
                                 }
                               </td>
                               <td style={{padding:"10px 10px",fontWeight:700,color:t.closed?pc(t.pnl):pc(unreal)}}>
-                                {t.closed?(t.pnl>=0?"+":"")+fu(t.pnl):(unreal>=0?"+":"")+fu(unreal)+" *"}
+                                {t.closed
+                                  ?(t.pnl>=0?"+":"")+"$"+Math.abs(t.pnl).toFixed(2)
+                                  :(unreal>=0?"+":"")+"$"+Math.abs(unreal).toFixed(2)+" *"}
                               </td>
                               <td style={{padding:"10px 10px",fontSize:11,color:T.text3}}>{t.closeReason||t.openTime}</td>
                             </tr>
