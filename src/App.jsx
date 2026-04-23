@@ -325,6 +325,11 @@ export default function App(){
   const [customResults,setCustomResults]=useState([]);
   const [customSearching,setCustomSearching]=useState(false);
   const [showAutoPanel,setShowAutoPanel]=useState(false);
+  const [coinNotes,setCoinNotes]=useState(()=>{
+    try{const s=localStorage.getItem("rose_coin_notes");return s?JSON.parse(s):{};}catch{return{};}
+  });
+  const [editingNoteId,setEditingNoteId]=useState(null);
+  const [noteDraft,setNoteDraft]=useState("");
   const alertRef=useRef([]);
   const customCoinsRef=useRef((()=>{
     try{const s=localStorage.getItem("rose_custom_coins");return s?JSON.parse(s):[];}catch{return[];}
@@ -646,6 +651,17 @@ export default function App(){
     try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
   };
 
+  // ── Coin Notes ──────────────────────────────────────────────────────
+  const saveCoinNote = (coinId, text) => {
+    const updated = text.trim()
+      ? {...coinNotes, [coinId]: {text:text.trim(), saved:nowT()}}
+      : Object.fromEntries(Object.entries(coinNotes).filter(([k])=>k!==coinId));
+    setCoinNotes(updated);
+    try{localStorage.setItem("rose_coin_notes",JSON.stringify(updated));}catch{}
+    setEditingNoteId(null);
+    setNoteDraft("");
+  };
+
   const fu_simple=(n)=>{if(!n||isNaN(n))return"—";if(n>=1e3)return"$"+(n/1e3).toFixed(1)+"K";if(n>=1)return"$"+n.toFixed(2);return"$"+n.toFixed(4);};
   const fp_simple=(n)=>(n>0?"+":"")+Number(n).toFixed(2)+"%";
   const getRegime=()=>{const b=btc?.price_change_percentage_24h??0;if(b<-8)return{label:"🔴 STOP TRADING",color:T.red};if(b<-4)return{label:"🟠 HIGH ALERT",color:"#f97316"};if(Math.abs(b)>2)return{label:"🟡 ELEVATED",color:T.gold};return{label:"🟢 FULL SPEED",color:T.green};};
@@ -835,6 +851,58 @@ Reply in EXACTLY this format:
                 style={{flex:1,padding:"10px",background:`${T.blue}12`,border:`1px solid ${T.blue}60`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:14,fontFamily:"inherit",fontWeight:700,textDecoration:"none",textAlign:"center"}}>
                 📊 Live Chart ↗
               </a>
+            </div>
+            {/* ── Coin Notes ─────────────────────────────────────── */}
+            <div style={{marginTop:12,background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:10,padding:"12px 14px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                <Lbl style={{marginBottom:0,color:T.gold}}>📝 My Notes</Lbl>
+                {coinNotes[c.id]&&editingNoteId!==c.id&&(
+                  <div style={{display:"flex",gap:6}}>
+                    <button onClick={()=>{setEditingNoteId(c.id);setNoteDraft(coinNotes[c.id].text);}}
+                      style={{padding:"3px 10px",background:"transparent",border:`1px solid ${T.bdr}`,borderRadius:6,color:T.text3,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>Edit</button>
+                    <button onClick={()=>saveCoinNote(c.id,"")}
+                      style={{padding:"3px 10px",background:"transparent",border:`1px solid ${T.red}40`,borderRadius:6,color:T.red,cursor:"pointer",fontSize:11,fontFamily:"inherit"}}>Delete</button>
+                  </div>
+                )}
+              </div>
+              {editingNoteId===c.id?(
+                <div>
+                  <textarea
+                    value={noteDraft}
+                    onChange={e=>setNoteDraft(e.target.value)}
+                    placeholder={"Write your notes about "+c.name+"...
+
+Examples:
+• Watch for breakout above "+fu(c.sr?.r1)+"
+• Dad said: strong fundamentals
+• Entry plan: buy near "+fu(c.sr?.s1)}
+                    autoFocus
+                    style={{width:"100%",minHeight:100,padding:"10px 12px",background:T.card,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.text,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",lineHeight:1.7,boxSizing:"border-box"}}
+                  />
+                  <div style={{display:"flex",gap:8,marginTop:8}}>
+                    <button onClick={()=>saveCoinNote(c.id,noteDraft)}
+                      style={{padding:"8px 20px",background:`linear-gradient(135deg,${T.blue3},${T.blue2})`,border:"none",borderRadius:8,color:"#fff",cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>
+                      Save Note
+                    </button>
+                    <button onClick={()=>{setEditingNoteId(null);setNoteDraft("");}}
+                      style={{padding:"8px 14px",background:"transparent",border:`1px solid ${T.bdr}`,borderRadius:8,color:T.text3,cursor:"pointer",fontSize:13,fontFamily:"inherit"}}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ):coinNotes[c.id]?(
+                <div>
+                  <div style={{fontSize:13,color:T.text2,lineHeight:1.8,whiteSpace:"pre-wrap",padding:"8px 10px",background:T.card,borderRadius:8}}>
+                    {coinNotes[c.id].text}
+                  </div>
+                  <div style={{fontSize:11,color:T.text3,marginTop:6}}>Saved: {coinNotes[c.id].saved}</div>
+                </div>
+              ):(
+                <button onClick={()=>{setEditingNoteId(c.id);setNoteDraft("");}}
+                  style={{width:"100%",padding:"10px",background:"transparent",border:`1px dashed ${T.bdr}`,borderRadius:8,color:T.text3,cursor:"pointer",fontSize:13,fontFamily:"inherit",textAlign:"center"}}>
+                  + Add a note about {c.symbol?.toUpperCase()}
+                </button>
+              )}
             </div>
           </div>
         )}
