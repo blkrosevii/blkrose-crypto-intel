@@ -1143,7 +1143,10 @@ Reply in EXACTLY this format:
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             {a.image&&<img src={a.image} alt="" style={{width:28,height:28,borderRadius:"50%",flexShrink:0}}/>}
-                            <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{a.symbol?.toUpperCase()}</div>
+                            <div style={{display:"flex",alignItems:"center",gap:6}}>
+                              <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{a.symbol?.toUpperCase()}</div>
+                              {a.market_cap_rank&&<span style={{fontSize:11,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.08)",padding:"1px 6px",borderRadius:4}}>#{a.market_cap_rank}</span>}
+                            </div>
                             <Pill color={a.vColor}>{a.verdict}</Pill>
                           </div>
                           <div style={{textAlign:"right",flexShrink:0,minWidth:70}}>
