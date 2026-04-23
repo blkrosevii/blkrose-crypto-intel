@@ -289,6 +289,9 @@ export default function App(){
   const [customSearching,setCustomSearching]=useState(false);
   const [showAutoPanel,setShowAutoPanel]=useState(false);
   const alertRef=useRef([]);
+  const customCoinsRef=useRef(()=>{
+    try{const s=localStorage.getItem("rose_custom_coins");return s?JSON.parse(s):[];}catch{return[];}
+  }());
 
   // ── Push Notifications ─────────────────────────────────────────────────
   const requestNotifPermission = async () => {
@@ -326,24 +329,12 @@ export default function App(){
     try{
       // VIP list — high credibility coins always fetched regardless of rank
       const permanentIds = [
-        "hedera-hashgraph",      // HBAR  — backed by Google & IBM, enterprise blockchain
-        "algorand",              // ALGO  — MIT professor, pure proof-of-stake
-        "kaspa",                 // KAS   — fast proof-of-work, strong community
-        "celestia",              // TIA   — modular blockchain, strong institutional backing
-        "stacks",                // STX   — brings smart contracts to Bitcoin
-        "immutable-x",           // IMX   — Ethereum L2 for NFT gaming, Sequoia backed
-        "dydx",                  // DYDX  — largest decentralized derivatives exchange
-        "aave",                  // AAVE  — leading DeFi lending, billions in TVL
-        "lido-dao",              // LDO   — largest ETH staking protocol
-        "ens",                   // ENS   — Ethereum Name Service, foundation backed
-        "oasis-network",         // ROSE  — privacy blockchain, UC Berkeley team
-        "thorchain",             // RUNE  — cross-chain DEX, unique utility
-        "gmx",                   // GMX   — decentralized perps, strong revenue
-        "pendle",                // PENDLE— yield trading, growing fast
-        "akash-network",         // AKT   — decentralized cloud computing
-        "singularitynet",        // AGIX  — AI marketplace, Ben Goertzel
+        "hedera-hashgraph","algorand","kaspa","celestia","stacks",
+        "immutable-x","dydx","aave","lido-dao","ens",
+        "oasis-network","thorchain","gmx","pendle","akash-network","singularitynet",
       ];
-      const allExtraIds = [...new Set([...permanentIds,...customCoins.map(c=>c.id)])];
+      const latestCustom = customCoinsRef.current.length ? customCoinsRef.current : customCoins;
+      const allExtraIds = [...new Set([...permanentIds,...latestCustom.map(c=>c.id)])];
       const customIds = allExtraIds.join(",");
       const [p1,p2,p3,customData] = await Promise.all([
         fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
@@ -370,7 +361,7 @@ export default function App(){
         return [...fresh,...prev].slice(0,100);
       });
     }catch{if(!silent) setStatus("error");}
-  },[]);
+  },[customCoins]);
 
   useEffect(()=>{fetchCoins();},[fetchCoins]);
   useEffect(()=>{
@@ -526,7 +517,10 @@ export default function App(){
     if(!customCoins.find(c=>c.id===coin.id)){
       const updated=[...customCoins,coin];
       setCustomCoins(updated);
+      customCoinsRef.current=updated;
       try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
+      // Immediately refetch to include new coin
+      setTimeout(()=>fetchCoins(true),500);
     }
     setCustomSearch("");
     setCustomResults([]);
@@ -535,6 +529,7 @@ export default function App(){
   const removeCustomCoin = (id) => {
     const updated=customCoins.filter(c=>c.id!==id);
     setCustomCoins(updated);
+    customCoinsRef.current=updated;
     try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
   };
 
@@ -641,7 +636,7 @@ Reply in EXACTLY this format:
               </div>
               <div style={{fontSize:14,color:T.text3}}>{c.name} · {fu(c.market_cap)}</div>
             </div>
-            <div style={{textAlign:"right",flexShrink:0}}>
+            <div style={{textAlign:"right",flexShrink:0,minWidth:70}}>
               <div style={{fontSize:18,fontWeight:700,color:T.text}}>{fu(c.current_price)}</div>
               <div style={{display:"flex",gap:10,justifyContent:"flex-end",marginTop:2}}>
                 <span style={{fontSize:14,color:pc(p24)}}>{fp(p24)}</span>
@@ -889,17 +884,17 @@ Reply in EXACTLY this format:
                     <button onClick={()=>runAI(alerts.slice(0,10),"All triggered alerts — which should I act on and why?")} style={{padding:"7px 14px",background:`${T.blue}12`,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.blue2,cursor:"pointer",fontSize:13,fontWeight:700,fontFamily:"inherit"}}>⚡ AI Read All</button>
                   </div>
                 </div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(280px,1fr))",gap:12}}>
                   {(showAllAlerts?[...alerts].sort((a,b)=>{const order={"STRONG BUY":0,"TAKE PROFIT":1,"BUY":2};return (order[a.verdict]??3)-(order[b.verdict]??3);}):alerts.slice(0,6)).map(a=>(
-                    <div key={`${a.id}-${a.ts}`} onClick={()=>{setSearch(a.symbol||"");setTab("signals");}} style={{padding:"16px 18px",background:a.verdict==="STRONG BUY"?`linear-gradient(135deg,#0a1a0a,#0f2a0f)`:`linear-gradient(135deg,#1a0808,#2a0a0a)`,border:`2px solid ${a.vColor}`,borderRadius:12,cursor:"pointer",boxShadow:`0 0 16px ${a.vColor}40`}}>
+                    <div key={`${a.id}-${a.ts}`} onClick={()=>{setSearch(a.symbol||"");setTab("signals");}} style={{padding:"14px 16px",background:a.verdict==="STRONG BUY"?`linear-gradient(135deg,#0a1a0a,#0f2a0f)`:`linear-gradient(135deg,#1a0808,#2a0a0a)`,border:`2px solid ${a.vColor}`,borderRadius:12,cursor:"pointer",boxShadow:`0 0 16px ${a.vColor}40`,overflow:"hidden",minWidth:0}}>
                       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,minWidth:0}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             {a.image&&<img src={a.image} alt="" style={{width:28,height:28,borderRadius:"50%",flexShrink:0}}/>}
-                            <div style={{fontSize:22,fontWeight:900,color:"#fff",letterSpacing:"0.04em"}}>{a.symbol?.toUpperCase()}</div>
+                            <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{a.symbol?.toUpperCase()}</div>
                             <Pill color={a.vColor}>{a.verdict}</Pill>
                           </div>
-                          <div style={{textAlign:"right",flexShrink:0}}>
+                          <div style={{textAlign:"right",flexShrink:0,minWidth:70}}>
                             <div style={{fontSize:18,fontWeight:900,color:"#fff"}}>{fu(a.current_price)}</div>
                             <div style={{fontSize:15,fontWeight:800,color:pc(a.price_change_percentage_24h)}}>{fp(a.price_change_percentage_24h)}</div>
                           </div>
