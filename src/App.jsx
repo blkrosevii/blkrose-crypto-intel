@@ -72,7 +72,17 @@ function getSignals(c) {
   return {verdict,vColor,signals:s,score:buy-sel,vm,sr:getSR(c.current_price)};
 }
 
-const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","hedera-hashgraph":"altcoin","render-token":"ai","fetch-ai":"ai",bittensor:"ai","the-graph":"ai","shiba-inu":"meme",pepe:"meme","dogwifcoin":"meme",bonk:"meme",floki:"meme","pax-gold":"rwa",maker:"rwa","ondo-finance":"rwa",tether:"stable","usd-coin":"stable",dai:"stable"};
+const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","hedera-hashgraph":"altcoin",
+  "stellar":"largecap","vechain":"altcoin","quant-network":"altcoin",
+  "toncoin":"largecap","cronos":"altcoin","fantom":"altcoin",
+  "kava":"altcoin","tron":"largecap","loopring":"altcoin",
+  "metis-token":"altcoin","curve-dao-token":"altcoin",
+  "compound-governance-token":"altcoin","balancer":"altcoin",
+  "ocean-protocol":"ai","numeraire":"ai","centrifuge":"rwa",
+  "goldfinch":"rwa","monero":"largecap","zcash":"altcoin",
+  "secret":"altcoin","axie-infinity":"altcoin","the-sandbox":"altcoin",
+  "decentraland":"altcoin","gala":"altcoin","band-protocol":"altcoin",
+  "api3":"altcoin","storj":"altcoin","render-token":"ai","fetch-ai":"ai",bittensor:"ai","the-graph":"ai","shiba-inu":"meme",pepe:"meme","dogwifcoin":"meme",bonk:"meme",floki:"meme","pax-gold":"rwa",maker:"rwa","ondo-finance":"rwa",tether:"stable","usd-coin":"stable",dai:"stable"};
 const getCat=id=>CAT_MAP[id]||"altcoin";
 
 const CRED_MAP={
@@ -101,6 +111,33 @@ const CRED_MAP={
   "pendle":       {cred:3,team:"TN Lee",backed:"Mechanism Capital",age:2,flags:[]},
   "akash-network":{cred:3,team:"Greg Osuri",backed:"Multicoin",age:4,flags:[]},
   "singularitynet":{cred:3,team:"Ben Goertzel",backed:"Outlier Ventures",age:5,flags:[]},
+  "stellar":       {cred:4,team:"Jed McCaleb",backed:"Stripe, BlackRock",age:10,flags:[]},
+  "vechain":       {cred:4,team:"Sunny Lu",backed:"PwC, BMW, Walmart",age:7,flags:[]},
+  "quant-network": {cred:4,team:"Gilbert Verdian",backed:"Institutional",age:5,flags:[]},
+  "toncoin":       {cred:4,team:"TON Foundation",backed:"Telegram 900M users",age:3,flags:[]},
+  "fantom":        {cred:3,team:"Andre Cronje",backed:"Various",age:5,flags:[]},
+  "kava":          {cred:3,team:"Scott Stuart",backed:"Arrington Capital",age:5,flags:[]},
+  "tron":          {cred:3,team:"Justin Sun",backed:"Various",age:7,flags:["Centralization concerns"]},
+  "cronos":        {cred:3,team:"Crypto.com",backed:"Crypto.com",age:3,flags:["Exchange risk"]},
+  "loopring":      {cred:3,team:"Daniel Wang",backed:"Various",age:5,flags:[]},
+  "metis-token":   {cred:3,team:"Elena Sinelnikova",backed:"Various",age:3,flags:[]},
+  "curve-dao-token":{cred:4,team:"Michael Egorov",backed:"Various",age:4,flags:["Multiple hacks"]},
+  "compound-governance-token":{cred:4,team:"Robert Leshner",backed:"a16z, Coinbase",age:5,flags:[]},
+  "balancer":      {cred:3,team:"Fernando Martinelli",backed:"Various",age:4,flags:[]},
+  "ocean-protocol":{cred:3,team:"Bruce Pon",backed:"Various",age:5,flags:[]},
+  "numeraire":     {cred:3,team:"Richard Craib",backed:"Union Square",age:7,flags:[]},
+  "centrifuge":    {cred:3,team:"Lucas Vogelsang",backed:"Various",age:4,flags:[]},
+  "goldfinch":     {cred:3,team:"Blake West",backed:"a16z",age:3,flags:[]},
+  "monero":        {cred:4,team:"Community",backed:"Community",age:10,flags:[]},
+  "zcash":         {cred:3,team:"Zooko Wilcox",backed:"Electric Coin Co",age:8,flags:[]},
+  "secret":        {cred:3,team:"Guy Zyskind (MIT)",backed:"Various",age:4,flags:[]},
+  "axie-infinity": {cred:3,team:"Sky Mavis",backed:"a16z",age:5,flags:["Hack history"]},
+  "the-sandbox":   {cred:3,team:"Sebastien Borget",backed:"SoftBank",age:4,flags:[]},
+  "decentraland":  {cred:3,team:"Ariel Meilich",backed:"Various",age:6,flags:[]},
+  "gala":          {cred:2,team:"Eric Schiermeyer",backed:"Various",age:4,flags:["Centralization"]},
+  "band-protocol": {cred:3,team:"Soravis Srinawakoon",backed:"Sequoia",age:4,flags:[]},
+  "api3":          {cred:3,team:"Heikki Vanttinen",backed:"Various",age:3,flags:[]},
+  "storj":         {cred:3,team:"Ben Golub",backed:"Various",age:7,flags:[]},
   "cosmos":       {cred:4,team:"Tendermint",backed:"ICF",age:6,flags:[]},
   "filecoin":     {cred:3,team:"Protocol Labs",backed:"a16z",age:4,flags:[]},
   "avalanche-2":  {cred:4,team:"Emin Gün Sirer",backed:"a16z, Polychain",age:4,flags:[]},
@@ -328,7 +365,60 @@ export default function App(){
     if(!silent) setStatus("loading");
     try{
       // VIP ids always fetched no matter what rank they are
-      const VIP_IDS = "hedera-hashgraph,algorand,kaspa,celestia,stacks,immutable-x,dydx,aave,lido-dao,ens,oasis-network,thorchain,gmx,pendle,akash-network,singularitynet";
+      const VIP_IDS = [
+        // Enterprise & Institutional
+        "hedera-hashgraph",  // HBAR  — Google, IBM, Boeing
+        "algorand",          // ALGO  — MIT professor, pure PoS
+        "stellar",           // XLM   — IBM, cross-border payments
+        "vechain",           // VET   — Walmart China, BMW, DNV
+        "quant-network",     // QNT   — enterprise interoperability
+        "toncoin",           // TON   — Telegram 900M users
+        // Strong Layer 1s
+        "kaspa",             // KAS   — fastest proof-of-work
+        "celestia",          // TIA   — modular blockchain
+        "stacks",            // STX   — smart contracts on Bitcoin
+        "fantom",            // FTM   — high speed L1
+        "kava",              // KAVA  — DeFi on Cosmos
+        "cronos",            // CRO   — Crypto.com chain
+        "tron",              // TRX   — huge user base, stablecoin volume
+        // Layer 2 & Scaling
+        "immutable-x",       // IMX   — Sequoia backed gaming L2
+        "dydx",              // DYDX  — largest decentralized derivatives
+        "loopring",          // LRC   — zkRollup DEX
+        "metis-token",       // METIS — Ethereum L2
+        // DeFi Blue Chips
+        "aave",              // AAVE  — leading lending protocol
+        "lido-dao",          // LDO   — largest ETH staking
+        "ens",               // ENS   — Ethereum Name Service
+        "curve-dao-token",   // CRV   — largest DEX by volume
+        "compound-governance-token", // COMP — DeFi lending pioneer
+        "thorchain",         // RUNE  — cross-chain DEX
+        "gmx",               // GMX   — decentralized perps
+        "pendle",            // PENDLE— yield trading
+        "balancer",          // BAL   — automated portfolio manager
+        // AI & Compute
+        "akash-network",     // AKT   — decentralized cloud
+        "singularitynet",    // AGIX  — AI marketplace
+        "ocean-protocol",    // OCEAN — data marketplace for AI
+        "numeraire",         // NMR   — AI hedge fund token
+        // Real World Assets
+        "centrifuge",        // CFG   — tokenized real world assets
+        "goldfinch",         // GFI   — credit for real businesses
+        // Privacy
+        "monero",            // XMR   — leading privacy coin
+        "zcash",             // ZEC   — zero knowledge privacy
+        "secret",            // SCRT  — encrypted smart contracts
+        // Gaming & Metaverse
+        "axie-infinity",     // AXS   — leading play-to-earn
+        "the-sandbox",       // SAND  — metaverse, major IP deals
+        "decentraland",      // MANA  — virtual world, Samsung
+        "gala",              // GALA  — gaming ecosystem
+        // Infrastructure
+        "oasis-network",     // ROSE  — privacy blockchain
+        "band-protocol",     // BAND  — oracle, Google Cloud
+        "api3",              // API3  — first-party oracles
+        "storj",             // STORJ — decentralized storage
+      ].join(",");
       let savedCustom = [];
       try { savedCustom = JSON.parse(localStorage.getItem("rose_custom_coins")||"[]"); } catch(e){}
       const savedCustomIds = savedCustom.map(c=>c.id).filter(Boolean).join(",");
