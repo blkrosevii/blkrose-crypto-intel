@@ -44,33 +44,109 @@ function getSR(p) {
   };
 }
 
-function getSignals(c) {
-  if (!c || c.cat==="stable") return {verdict:"STABLE",vColor:T.text3,signals:[],score:0,sr:null};
-  const p24=c.price_change_percentage_24h??0;
-  const p7 =c.price_change_percentage_7d_in_currency??0;
-  const p1 =c.price_change_percentage_1h_in_currency??0;
-  const athD=c.ath_change_percentage??0;
-  const vm =c.total_volume&&c.market_cap?(c.total_volume/c.market_cap)*100:0;
-  const s=[];
-  if(vm>50)       s.push({label:"🐋 Vol Spike",    dir:"BUY", w:3,why:`Vol/MCap ${vm.toFixed(0)}% — extreme activity`});
-  else if(vm>20)  s.push({label:"⚡ Vol Elevated",  dir:"BUY", w:2,why:`Vol/MCap ${vm.toFixed(0)}% — above normal`});
-  if(p24>20)      s.push({label:"🚀 Breakout",      dir:"BUY", w:3,why:`+${p24.toFixed(1)}% today — strong breakout`});
-  else if(p24>8)  s.push({label:"📈 Momentum",      dir:"BUY", w:2,why:`+${p24.toFixed(1)}% today`});
-  if(p7>40)       s.push({label:"🔥 7D Runner",     dir:"BUY", w:2,why:`+${p7.toFixed(1)}% in 7 days`});
-  if(athD<-85)    s.push({label:"💎 Deep Discount", dir:"BUY", w:2,why:`${athD.toFixed(0)}% from ATH`});
-  if(p1>3&&p24>5) s.push({label:"⏱ Accelerating",  dir:"BUY", w:2,why:"1h and 24h both positive"});
-  if(p24>50)      s.push({label:"⚠️ Overextended",  dir:"SELL",w:3,why:`+${p24.toFixed(0)}% in 24h — reversal likely`});
-  if(p7>100)      s.push({label:"📉 Overheated",    dir:"SELL",w:3,why:`+${p7.toFixed(0)}% in 7d — correction expected`});
-  if(vm>80&&p24>30) s.push({label:"🔴 Extreme Vol", dir:"SELL",w:2,why:"Possible final pump stage"});
-  const buy=s.filter(x=>x.dir==="BUY").reduce((a,x)=>a+x.w,0);
-  const sel=s.filter(x=>x.dir==="SELL").reduce((a,x)=>a+x.w,0);
-  let verdict="WATCH",vColor=T.gold;
-  if(buy>=5&&sel<3)      {verdict="STRONG BUY"; vColor=T.green;}
-  else if(buy>=3&&sel<2) {verdict="BUY";        vColor="#4ade80";}
-  else if(sel>=5)        {verdict="TAKE PROFIT";vColor=T.red;}
-  else if(sel>=2&&buy<2) {verdict="CAUTION";    vColor=T.gold;}
-  return {verdict,vColor,signals:s,score:buy-sel,vm,sr:getSR(c.current_price)};
+function getSignals(c,btcChange24h=0){
+  if(!c||c.cat==="stable") return {verdict:"STABLE",vColor:T.text3,signals:[],score:0,sr:null};
+
+  const p24 = c.price_change_percentage_24h??0;
+  const p7  = c.price_change_percentage_7d_in_currency??0;
+  const p1  = c.price_change_percentage_1h_in_currency??0;
+  const athD= c.ath_change_percentage??0;
+  const rank= c.market_cap_rank||999;
+  const vm  = c.total_volume&&c.market_cap?(c.total_volume/c.market_cap)*100:0;
+  const cred= (c.cred||3);
+  const isLargeCap = rank<=50;
+  const isMid = rank>50&&rank<=200;
+
+  // ── Market Regime Gate ─────────────────────────────────────────────
+  // In crash conditions suppress all buy signals
+  const regimeCrash = btcChange24h < -8;
+  const regimeAlert = btcChange24h < -4;
+
+  const s = [];
+
+  // ── LARGE CAP TRACK (rank 1-50) ────────────────────────────────────
+  if(isLargeCap){
+    // Lower thresholds — large caps move slower but moves are more reliable
+
+    // Volume relative to AVERAGE (not market cap) — any elevation matters
+    if(vm>10)       s.push({label:"🐋 Vol Spike",     dir:"BUY", w:3,why:"Volume spike — significant institutional activity"});
+    else if(vm>5)   s.push({label:"⚡ Vol Rising",    dir:"BUY", w:2,why:"Volume above normal for a large cap"});
+
+    // Trend consistency — all 3 timeframes positive is very bullish for large caps
+    if(p1>0&&p24>0&&p7>0) s.push({label:"📈 Trend Aligned",dir:"BUY", w:3,why:"Positive across 1h, 24h and 7d — strong consistent trend"});
+
+    // Momentum thresholds adjusted for large caps
+    if(p24>5)       s.push({label:"🚀 Breakout",      dir:"BUY", w:3,why:`+${p24.toFixed(1)}% today — significant for a large cap`});
+    else if(p24>2)  s.push({label:"📊 Momentum",      dir:"BUY", w:2,why:`+${p24.toFixed(1)}% today — healthy large cap move`});
+    if(p7>15)       s.push({label:"🔥 Weekly Runner",  dir:"BUY", w:2,why:`+${p7.toFixed(1)}% this week`});
+
+    // ATH discount — large caps rarely hit 85% so lower threshold
+    if(athD<-60)    s.push({label:"💎 Deep Discount",  dir:"BUY", w:2,why:`${athD.toFixed(0)}% from ATH — historically strong value zone`});
+    else if(athD<-40) s.push({label:"📉 Discounted",   dir:"BUY", w:1,why:`${athD.toFixed(0)}% below ATH`});
+
+    // Sell signals for large caps
+    if(p24>15)      s.push({label:"⚠️ Overextended",  dir:"SELL",w:2,why:`+${p24.toFixed(0)}% in 24h is extended even for a large cap`});
+    if(p7>40)       s.push({label:"📉 Overheated",     dir:"SELL",w:3,why:`+${p7.toFixed(0)}% in 7 days — correction likely`});
+
+  // ── ALTCOIN TRACK (rank 51-200) ────────────────────────────────────
+  } else if(isMid){
+    if(vm>30)       s.push({label:"🐋 Vol Spike",     dir:"BUY", w:3,why:`Vol/MCap ${vm.toFixed(0)}% — strong activity`});
+    else if(vm>15)  s.push({label:"⚡ Vol Elevated",  dir:"BUY", w:2,why:`Vol/MCap ${vm.toFixed(0)}% — above normal`});
+    if(p1>0&&p24>0&&p7>0) s.push({label:"📈 Trend Aligned",dir:"BUY",w:2,why:"Positive across all 3 timeframes"});
+    if(p24>15)      s.push({label:"🚀 Breakout",      dir:"BUY", w:3,why:`+${p24.toFixed(1)}% today`});
+    else if(p24>6)  s.push({label:"📈 Momentum",      dir:"BUY", w:2,why:`+${p24.toFixed(1)}% today`});
+    if(p7>30)       s.push({label:"🔥 Weekly Runner",  dir:"BUY", w:2,why:`+${p7.toFixed(1)}% this week`});
+    if(athD<-80)    s.push({label:"💎 Deep Discount",  dir:"BUY", w:2,why:`${athD.toFixed(0)}% from ATH`});
+    if(p1>2&&p24>4) s.push({label:"⏱ Accelerating",  dir:"BUY", w:2,why:"Momentum building across timeframes"});
+    if(p24>40)      s.push({label:"⚠️ Overextended",  dir:"SELL",w:3,why:`+${p24.toFixed(0)}% in 24h — reversal likely`});
+    if(p7>80)       s.push({label:"📉 Overheated",     dir:"SELL",w:3,why:`+${p7.toFixed(0)}% in 7d`});
+    if(vm>80&&p24>20) s.push({label:"🔴 Extreme Vol", dir:"SELL",w:2,why:"Possible final pump stage"});
+
+  // ── SMALL CAP TRACK (rank 201+) ────────────────────────────────────
+  } else {
+    if(vm>50)       s.push({label:"🐋 Vol Spike",     dir:"BUY", w:3,why:`Vol/MCap ${vm.toFixed(0)}% — extreme activity`});
+    else if(vm>20)  s.push({label:"⚡ Vol Elevated",  dir:"BUY", w:2,why:`Vol/MCap ${vm.toFixed(0)}% — above normal`});
+    if(p1>0&&p24>0&&p7>0) s.push({label:"📈 Trend Aligned",dir:"BUY",w:2,why:"All timeframes positive"});
+    if(p24>20)      s.push({label:"🚀 Breakout",      dir:"BUY", w:3,why:`+${p24.toFixed(1)}% today — strong breakout`});
+    else if(p24>8)  s.push({label:"📈 Momentum",      dir:"BUY", w:2,why:`+${p24.toFixed(1)}% today`});
+    if(p7>40)       s.push({label:"🔥 7D Runner",     dir:"BUY", w:2,why:`+${p7.toFixed(1)}% in 7 days`});
+    if(athD<-85)    s.push({label:"💎 Deep Discount",  dir:"BUY", w:2,why:`${athD.toFixed(0)}% from ATH`});
+    if(p1>3&&p24>5) s.push({label:"⏱ Accelerating",  dir:"BUY", w:2,why:"1h and 24h both strongly positive"});
+    if(p24>50)      s.push({label:"⚠️ Overextended",  dir:"SELL",w:3,why:`+${p24.toFixed(0)}% in 24h — reversal likely`});
+    if(p7>100)      s.push({label:"📉 Overheated",     dir:"SELL",w:3,why:`+${p7.toFixed(0)}% in 7d — correction expected`});
+    if(vm>80&&p24>30) s.push({label:"🔴 Extreme Vol", dir:"SELL",w:2,why:"Possible final pump stage"});
+  }
+
+  // ── Already up too much this week — suppress buys ──────────────────
+  if(p7>60){
+    s.push({label:"📛 Weekly Pump",   dir:"SELL",w:3,why:`Already up ${p7.toFixed(0)}% this week — high risk of reversal`});
+  }
+
+  // ── Credibility weight — low cred coins need stronger signals ───────
+  // 1-2 star coins get a penalty making it harder to reach STRONG BUY
+  if(cred<=2) s.push({label:"⚠️ Low Credibility",dir:"SELL",w:2,why:"Anonymous or unverified project — signals less reliable"});
+  if(cred===1) s.push({label:"🚨 Very Low Cred",  dir:"SELL",w:2,why:"Extreme caution — unknown team and backing"});
+
+  // ── Market regime suppression ──────────────────────────────────────
+  if(regimeCrash) s.push({label:"🔴 Market Crash", dir:"SELL",w:5,why:"BTC down 8%+ — no buy signals in crash conditions"});
+  else if(regimeAlert) s.push({label:"🟠 Market Alert",dir:"SELL",w:2,why:"BTC down 4%+ — elevated risk environment"});
+
+  const buy = s.filter(x=>x.dir==="BUY").reduce((a,x)=>a+x.w,0);
+  const sel = s.filter(x=>x.dir==="SELL").reduce((a,x)=>a+x.w,0);
+  const netScore = buy - sel;
+
+  // ── Verdict thresholds ─────────────────────────────────────────────
+  let verdict="WATCH", vColor=T.gold;
+  if(regimeCrash){
+    verdict="CAUTION"; vColor=T.red;
+  } else if(buy>=6&&sel<3)      {verdict="STRONG BUY"; vColor=T.green;}
+  else if(buy>=4&&sel<2)        {verdict="BUY";        vColor="#4ade80";}
+  else if(sel>=6)               {verdict="TAKE PROFIT";vColor=T.red;}
+  else if(sel>=3&&buy<3)        {verdict="CAUTION";    vColor=T.gold;}
+
+  return {verdict,vColor,signals:s,score:netScore,vm,sr:getSR(c.current_price)};
 }
+
 
 const CAT_MAP={bitcoin:"largecap",ethereum:"largecap",binancecoin:"largecap",ripple:"largecap",solana:"largecap",cardano:"largecap",dogecoin:"largecap",litecoin:"largecap","bitcoin-cash":"largecap",cosmos:"largecap",filecoin:"largecap","avalanche-2":"altcoin",chainlink:"altcoin",polkadot:"altcoin",uniswap:"altcoin",sui:"altcoin","near-protocol":"altcoin",aptos:"altcoin","injective-protocol":"altcoin",arbitrum:"altcoin",optimism:"altcoin",sei:"altcoin",hedera:"altcoin","hedera-hashgraph":"altcoin",
   "stellar":"largecap","vechain":"altcoin","quant-network":"altcoin",
@@ -592,7 +668,8 @@ export default function App(){
     }));
   },[coins]);
 
-  const enriched=coins.map(c=>({...c,...getSignals(c),...getCred(c.id)}));
+  const btc24h = coins.find(c=>c.id==="bitcoin")?.price_change_percentage_24h??0;
+  const enriched=coins.map(c=>({...c,...getSignals(c,btc24h),...getCred(c.id)}));
   const btc=enriched.find(c=>c.id==="bitcoin");
   const topBuys=enriched.filter(c=>c.verdict==="STRONG BUY"||c.verdict==="BUY").sort((a,b)=>b.score-a.score);
   const topSells=enriched.filter(c=>c.verdict==="TAKE PROFIT");
@@ -1564,7 +1641,7 @@ Reply in EXACTLY this format:
                 title:"🎯 Signal Verdicts — What Each One Means",
                 color:T.blue2,
                 items:[
-                  {term:"STRONG BUY",color:T.green,def:"The highest confidence signal. Multiple strong indicators all pointing up at the same time. Volume is elevated, price momentum is building, and the coin is not overextended. This is the signal you most want to act on."},
+                  {term:"STRONG BUY",color:T.green,def:"The highest confidence signal. Multiple strong indicators pointing up simultaneously — volume elevated, momentum building, trend aligned across timeframes, and coin not overextended. Low credibility coins face a higher bar to reach this level. Always check the credibility rating before acting."},
                   {term:"BUY",color:"#4ade80",def:"Good buying opportunity. Fewer indicators than Strong Buy but still a solid setup. Worth considering especially if price is near a Support level."},
                   {term:"WATCH",color:T.gold,def:"Some positive signs but not enough to act yet. A score of 0 simply means no signals are currently firing — the coin is being tracked but conditions are neutral. Put it on your watchlist and check back. Often upgrades to BUY or STRONG BUY within hours if momentum builds."},
                   {term:"CAUTION",color:T.gold,def:"Mixed signals. Something looks off — could be overextended, losing momentum, or showing early reversal signs. Not a time to buy. Consider reducing position if you already hold it."},
@@ -1576,12 +1653,15 @@ Reply in EXACTLY this format:
                 title:"📊 Confidence Score — How It Is Calculated",
                 color:T.blue2,
                 items:[
-                  {term:"What it is",color:T.blue2,def:"A score from 0 to 100 that measures how strong the buy or sell signal is. Higher = stronger signal. We recommend only acting on scores of 65 or above as a beginner."},
-                  {term:"Volume Score (up to 30 pts)",color:T.blue2,def:"Measures unusual trading activity. When a coin's daily volume is more than 20% of its total market cap, something significant is happening — traders are paying attention. A spike to 50%+ is a very strong sign."},
-                  {term:"Price Momentum (up to 25 pts)",color:T.blue2,def:"Looks at price change over 1 hour, 24 hours, and 7 days. If all three timeframes are positive and accelerating, that is a strong trend. A coin up 20%+ in 24 hours scores maximum points here."},
-                  {term:"ATH Discount (up to 15 pts)",color:T.blue2,def:"ATH means All-Time High — the highest price the coin has ever reached. If a coin is 85% or more below its ATH, it is deeply discounted and scores bonus points. Think of it like buying something on a massive sale."},
-                  {term:"Credibility Bonus (up to 10 pts)",color:T.blue2,def:"Coins with a 5-star credibility rating (like Bitcoin and Ethereum) get bonus confidence points. Anonymous meme coins with no utility get fewer points. This prevents the tool from over-hyping risky projects."},
-                  {term:"Overextension Penalty (-20 pts)",color:T.red,def:"If a coin is up 50%+ in 24 hours or 100%+ in 7 days, points are deducted. Chasing coins that have already pumped is one of the most common beginner mistakes. The penalty protects you from FOMO."},
+                  {term:"What it is",color:T.blue2,def:"A score from 0 to 100 measuring signal strength. The algorithm uses THREE separate scoring tracks depending on the coin's market cap rank — Large Cap (top 50), Mid Cap (51-200), and Small Cap (201+). Each track has different thresholds because large coins move differently than small ones."},
+                  {term:"Large Cap Track (rank 1-50)",color:T.blue2,def:"Bitcoin, Ethereum and the top 50 coins use lower thresholds. A 2% move in 24h scores the same as 8% for a small cap. Volume only needs to be 5% of market cap to trigger. This means BTC and ETH can now show BUY signals that the old algorithm missed completely."},
+                  {term:"Mid Cap Track (rank 51-200)",color:T.blue2,def:"Established altcoins like HBAR, ALGO, AAVE. Moderate thresholds — 6% momentum triggers a signal, volume needs 15%+ of market cap. Balanced between sensitivity and reliability."},
+                  {term:"Small Cap Track (rank 201+)",color:T.blue2,def:"Higher thresholds required. Needs 8%+ momentum, 20%+ volume spike, or 85%+ ATH discount. Small caps are more volatile so the bar is higher to filter out noise."},
+                  {term:"Trend Alignment Bonus",color:T.green,def:"If a coin is positive across ALL THREE timeframes (1 hour up, 24 hours up, AND 7 days up) at the same time, it gets bonus points. This pattern shows sustained momentum rather than a random spike — much more reliable."},
+                  {term:"Credibility Penalty",color:T.red,def:"1-star and 2-star coins (anonymous, no utility) get automatic sell-side penalty points added. This means they need much stronger signals to reach STRONG BUY. A 1-star coin needs nearly perfect signals while a 5-star coin needs fewer."},
+                  {term:"Weekly Pump Suppression",color:T.red,def:"Any coin already up 60%+ in 7 days gets a heavy sell penalty regardless of other signals. Chasing coins that have already pumped big is one of the most common and costly beginner mistakes."},
+                  {term:"Market Regime Gate",color:T.red,def:"When BTC is down 8%+ in 24 hours the entire market is crashing. In this condition ALL buy signals are suppressed and everything shows CAUTION. When BTC is down 4-8% buy thresholds are raised automatically."},
+                  {term:"Score of 0",color:T.text3,def:"Means no signals are currently firing for that coin — neutral conditions. It does not mean the coin is bad. Check back later when market conditions change."},
                 ]
               },
               {
@@ -1637,7 +1717,7 @@ Reply in EXACTLY this format:
                   {term:"🟢 FULL SPEED",color:T.green,def:"Bitcoin is moving positively (under 2% either direction or slightly up). The overall market is calm and healthy. Good conditions for all trade types."},
                   {term:"🟡 ELEVATED",color:T.gold,def:"Bitcoin has moved more than 2% in either direction. Things are more volatile than normal. Stick to high-confidence signals only and reduce position sizes slightly."},
                   {term:"🟠 HIGH ALERT",color:"#f97316",def:"Bitcoin is down 4-8%. The whole market is likely selling off. Only trade if you have a very strong signal (score 80+). Consider sitting out and watching."},
-                  {term:"🔴 STOP TRADING",color:T.red,def:"Bitcoin is down more than 8% in 24 hours. This is a market-wide crash or panic. Stop all trading. Do not try to catch the bottom. Preserve your capital and come back when things stabilize."},
+                  {term:"🔴 STOP TRADING",color:T.red,def:"Bitcoin is down more than 8% in 24 hours. This is a market-wide crash or panic. The algorithm automatically suppresses ALL buy signals in this condition — nothing will show as STRONG BUY or BUY. Preserve your capital and come back when things stabilize."},
                 ]
               },
               {
