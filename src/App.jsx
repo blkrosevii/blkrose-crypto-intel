@@ -1140,18 +1140,18 @@ Reply in EXACTLY this format:
                   {(showAllAlerts?[...alerts].sort((a,b)=>{const order={"STRONG BUY":0,"TAKE PROFIT":1,"BUY":2};return (order[a.verdict]??3)-(order[b.verdict]??3);}):alerts.slice(0,6)).map(a=>(
                     <div key={`${a.id}-${a.ts}`} onClick={()=>{setSearch(a.symbol||"");setTab("signals");}} style={{padding:"14px 16px",background:a.verdict==="STRONG BUY"?`linear-gradient(135deg,#0a1a0a,#0f2a0f)`:`linear-gradient(135deg,#1a0808,#2a0a0a)`,border:`2px solid ${a.vColor}`,borderRadius:12,cursor:"pointer",boxShadow:`0 0 16px ${a.vColor}40`,overflow:"hidden",minWidth:0}}>
                       <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8,minWidth:0}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:6,minWidth:0,overflow:"hidden"}}>
                           <div style={{display:"flex",alignItems:"center",gap:8}}>
                             {a.image&&<img src={a.image} alt="" style={{width:28,height:28,borderRadius:"50%",flexShrink:0}}/>}
-                            <div style={{display:"flex",alignItems:"center",gap:6}}>
-                              <div style={{fontSize:20,fontWeight:900,color:"#fff",letterSpacing:"0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",maxWidth:100}}>{a.symbol?.toUpperCase()}</div>
-                              {a.market_cap_rank&&<span style={{fontSize:11,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.08)",padding:"1px 6px",borderRadius:4}}>#{a.market_cap_rank}</span>}
+                            <div style={{display:"flex",alignItems:"center",gap:5,minWidth:0,flex:1}}>
+                              <div style={{fontSize:18,fontWeight:900,color:"#fff",letterSpacing:"0.02em",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.symbol?.toUpperCase()}</div>
+                              {a.market_cap_rank&&<span style={{fontSize:10,fontWeight:600,color:"#64748b",background:"rgba(255,255,255,0.08)",padding:"1px 5px",borderRadius:4,flexShrink:0}}>#{a.market_cap_rank}</span>}
                             </div>
-                            <Pill color={a.vColor}>{a.verdict}</Pill>
+                            <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:20,background:`${a.vColor}18`,border:`1px solid ${a.vColor}50`,color:a.vColor,whiteSpace:"nowrap",flexShrink:0}}>{a.verdict}</span>
                           </div>
-                          <div style={{textAlign:"right",flexShrink:0,minWidth:70}}>
-                            <div style={{fontSize:18,fontWeight:900,color:"#fff"}}>{fu(a.current_price)}</div>
-                            <div style={{fontSize:15,fontWeight:800,color:pc(a.price_change_percentage_24h)}}>{fp(a.price_change_percentage_24h)}</div>
+                          <div style={{textAlign:"right",flexShrink:0,minWidth:80,maxWidth:100}}>
+                            <div style={{fontSize:16,fontWeight:900,color:"#fff",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{fu(a.current_price)}</div>
+                            <div style={{fontSize:13,fontWeight:800,color:pc(a.price_change_percentage_24h)}}>{fp(a.price_change_percentage_24h)}</div>
                           </div>
                         </div>
                         <div style={{display:"flex",alignItems:"center",gap:6}}>
