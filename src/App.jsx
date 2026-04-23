@@ -463,10 +463,10 @@ export default function App(){
     coins.forEach(c=>{
       const {verdict,vColor,signals}=getSignals(c);
       if(verdict==="STRONG BUY"||verdict==="TAKE PROFIT"){
-        const recent=alertRef.current.some(a=>a.id===c.id&&Date.now()-a.ts<180000);
+        // Only fire if this coin hasn't alerted in the last 30 minutes
+        const recent=alertRef.current.some(a=>a.id===c.id&&Date.now()-a.ts<1800000);
         if(!recent){
           fired.push({...c,verdict,vColor,signals,score:getSignals(c).score,cred:c.cred||null,alertTime:nowT(),ts:Date.now()});
-          // Send push notification for strong signals
           if(notifEnabled && Notification.permission==="granted"){
             const title = verdict==="STRONG BUY"
               ? "STRONG BUY — "+c.symbol?.toUpperCase()
@@ -478,7 +478,12 @@ export default function App(){
         }
       }
     });
-    if(fired.length) setAlerts(prev=>[...fired,...prev].slice(0,30));
+    if(fired.length) setAlerts(prev=>{
+      // Also deduplicate against existing alerts — keep only the most recent per coin
+      const existingIds=new Set(fired.map(f=>f.id));
+      const filtered=prev.filter(a=>!existingIds.has(a.id));
+      return [...fired,...filtered].slice(0,30);
+    });
   },[coins]);
 
   // ── Auto Paper Trading Engine ─────────────────────────────────────────
