@@ -325,6 +325,9 @@ export default function App(){
   const [customResults,setCustomResults]=useState([]);
   const [customSearching,setCustomSearching]=useState(false);
   const [showAutoPanel,setShowAutoPanel]=useState(false);
+  const [coinTags,setCoinTags]=useState(()=>{
+    try{const s=localStorage.getItem("rose_coin_tags");return s?JSON.parse(s):{};}catch{return{};}
+  });
   const [coinNotes,setCoinNotes]=useState(()=>{
     try{const s=localStorage.getItem("rose_coin_notes");return s?JSON.parse(s):{};}catch{return{};}
   });
@@ -651,6 +654,33 @@ export default function App(){
     try{localStorage.setItem("rose_custom_coins",JSON.stringify(updated));}catch{}
   };
 
+  // ── Coin Tags ───────────────────────────────────────────────────────
+  const SUGGESTED_TAGS = [
+    {label:"🚨 Pump & Dump",  color:"#ef4444"},
+    {label:"⚠️ High Risk",    color:"#f97316"},
+    {label:"👀 Watching",     color:"#f59e0b"},
+    {label:"💎 Long Hold",    color:"#22c55e"},
+    {label:"🚀 Strong Setup", color:"#2563eb"},
+    {label:"❌ Avoid",        color:"#ef4444"},
+    {label:"📊 Dad's Pick",   color:"#a78bfa"},
+    {label:"🔄 Swing Trade",  color:"#60a5fa"},
+    {label:"🧪 Testing",      color:"#64748b"},
+    {label:"✅ Trusted",      color:"#22c55e"},
+  ];
+
+  const toggleCoinTag = (coinId, tag) => {
+    const current = coinTags[coinId] || [];
+    const exists = current.includes(tag);
+    const updated = {
+      ...coinTags,
+      [coinId]: exists ? current.filter(t=>t!==tag) : [...current, tag]
+    };
+    // Clean up empty arrays
+    if(updated[coinId].length===0) delete updated[coinId];
+    setCoinTags(updated);
+    try{localStorage.setItem("rose_coin_tags",JSON.stringify(updated));}catch{}
+  };
+
   // ── Coin Notes ──────────────────────────────────────────────────────
   const saveCoinNote = (coinId, text) => {
     const updated = text.trim()
@@ -762,6 +792,10 @@ Reply in EXACTLY this format:
                 {c.isCustom&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:4,background:`${T.purple2}18`,border:`1px solid ${T.purple2}40`,color:T.purple2}}>CUSTOM</span>}
                 <Pill color={c.vColor||T.gold}>{c.verdict||"WATCH"}</Pill>
                 {c.sr&&<Pill color={T.blue2} size={10}>S/R</Pill>}
+                {(coinTags[c.id]||[]).slice(0,2).map(t=>{
+                  const tagDef=SUGGESTED_TAGS.find(s=>s.label===t)||{color:T.blue2};
+                  return <Pill key={t} color={tagDef.color} size={10}>{t}</Pill>;
+                })}
               </div>
               <div style={{fontSize:14,color:T.text3}}>{c.name} · {fu(c.market_cap)}</div>
             </div>
@@ -852,6 +886,34 @@ Reply in EXACTLY this format:
                 📊 Live Chart ↗
               </a>
             </div>
+            {/* ── Coin Tags ──────────────────────────────────────── */}
+            <div style={{marginTop:12,background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:10,padding:"12px 14px"}}>
+              <Lbl style={{marginBottom:8,color:T.text3}}>🏷️ My Tags</Lbl>
+              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                {SUGGESTED_TAGS.map(tag=>{
+                  const active=(coinTags[c.id]||[]).includes(tag.label);
+                  return(
+                    <button key={tag.label} onClick={()=>toggleCoinTag(c.id,tag.label)}
+                      style={{padding:"4px 12px",borderRadius:20,fontSize:12,fontWeight:active?700:400,
+                        background:active?`${tag.color}20`:"transparent",
+                        border:`1px solid ${active?tag.color:T.bdr}`,
+                        color:active?tag.color:T.text3,
+                        cursor:"pointer",fontFamily:"inherit",transition:"all 0.15s"}}>
+                      {tag.label}
+                    </button>
+                  );
+                })}
+              </div>
+              {(coinTags[c.id]||[]).length>0&&(
+                <div style={{marginTop:10,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                  <span style={{fontSize:11,color:T.text3}}>Active:</span>
+                  {(coinTags[c.id]||[]).map(t=>{
+                    const tagDef=SUGGESTED_TAGS.find(s=>s.label===t)||{color:T.blue2};
+                    return <span key={t} style={{fontSize:12,fontWeight:700,padding:"2px 10px",borderRadius:20,background:`${tagDef.color}18`,border:`1px solid ${tagDef.color}50`,color:tagDef.color}}>{t}</span>;
+                  })}
+                </div>
+              )}
+            </div>
             {/* ── Coin Notes ─────────────────────────────────────── */}
             <div style={{marginTop:12,background:T.surf,border:`1px solid ${T.bdr}`,borderRadius:10,padding:"12px 14px"}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
@@ -870,13 +932,7 @@ Reply in EXACTLY this format:
                   <textarea
                     value={noteDraft}
                     onChange={e=>setNoteDraft(e.target.value)}
-                    placeholder={"Write your notes about "+c.name+"...
-
-Examples:
-• Watch for breakout above "+fu(c.sr?.r1)+"
-• Dad said: strong fundamentals
-• Entry plan: buy near "+fu(c.sr?.s1)}
-                    autoFocus
+                    placeholder={"Notes about "+c.name+" — e.g. watch for breakout, entry plan, analysis..."}
                     style={{width:"100%",minHeight:100,padding:"10px 12px",background:T.card,border:`1px solid ${T.blue}50`,borderRadius:8,color:T.text,fontSize:13,fontFamily:"inherit",outline:"none",resize:"vertical",lineHeight:1.7,boxSizing:"border-box"}}
                   />
                   <div style={{display:"flex",gap:8,marginTop:8}}>
