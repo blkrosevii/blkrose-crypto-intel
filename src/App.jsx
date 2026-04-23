@@ -748,7 +748,10 @@ Reply in EXACTLY this format:
             <div style={{marginBottom:16}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                 <Lbl style={{marginBottom:0}}>Confidence Score</Lbl>
-                <span style={{fontSize:24,fontWeight:800,color:c.vColor||T.blue2}}>{Math.min(Math.abs(c.score||0)*12,100)}<span style={{fontSize:15,color:T.text3}}>/100</span></span>
+                {Math.min(Math.abs(c.score||0)*12,100)===0
+                  ? <span style={{fontSize:14,fontWeight:700,color:T.text3}}>No signal yet — watching</span>
+                  : <span style={{fontSize:24,fontWeight:800,color:c.vColor||T.blue2}}>{Math.min(Math.abs(c.score||0)*12,100)}<span style={{fontSize:15,color:T.text3}}>/100</span></span>
+                }
               </div>
               <div style={{height:6,background:T.bdr,borderRadius:3,overflow:"hidden"}}>
                 <div style={{height:"100%",width:`${Math.min(Math.abs(c.score||0)*12,100)}%`,background:`linear-gradient(90deg,${T.blue3},${T.blue2})`,borderRadius:3}}/>
@@ -1003,7 +1006,9 @@ Reply in EXACTLY this format:
                       <div style={{marginTop:8}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
                           <span style={{fontSize:12,color:T.text3,letterSpacing:"0.06em"}}>CONFIDENCE</span>
-                          <span style={{fontSize:14,fontWeight:800,color:a.vColor}}>{Math.min(Math.abs(a.score||0)*12,100)}/100</span>
+                          <span style={{fontSize:14,fontWeight:800,color:a.vColor}}>
+                          {Math.min(Math.abs(a.score||0)*12,100)===0?"—":Math.min(Math.abs(a.score||0)*12,100)+"/100"}
+                        </span>
                         </div>
                         <div style={{height:6,background:"rgba(255,255,255,0.1)",borderRadius:3,overflow:"hidden"}}>
                           <div style={{height:"100%",width:Math.min(Math.abs(a.score||0)*12,100)+"%",background:a.vColor,borderRadius:3}}/>
@@ -1369,7 +1374,7 @@ Reply in EXACTLY this format:
                 items:[
                   {term:"STRONG BUY",color:T.green,def:"The highest confidence signal. Multiple strong indicators all pointing up at the same time. Volume is elevated, price momentum is building, and the coin is not overextended. This is the signal you most want to act on."},
                   {term:"BUY",color:"#4ade80",def:"Good buying opportunity. Fewer indicators than Strong Buy but still a solid setup. Worth considering especially if price is near a Support level."},
-                  {term:"WATCH",color:T.gold,def:"Some positive signs but not enough to act yet. Put it on your watchlist and check back. Often upgrades to BUY or STRONG BUY within hours if momentum builds."},
+                  {term:"WATCH",color:T.gold,def:"Some positive signs but not enough to act yet. A score of 0 simply means no signals are currently firing — the coin is being tracked but conditions are neutral. Put it on your watchlist and check back. Often upgrades to BUY or STRONG BUY within hours if momentum builds."},
                   {term:"CAUTION",color:T.gold,def:"Mixed signals. Something looks off — could be overextended, losing momentum, or showing early reversal signs. Not a time to buy. Consider reducing position if you already hold it."},
                   {term:"TAKE PROFIT",color:T.red,def:"The coin has moved significantly and the data suggests a pullback or reversal is likely. If you hold this coin, consider taking some or all profits. Not a signal to buy."},
                   {term:"STABLE",color:T.text3,def:"Stablecoins like USDT and USDC. These are meant to stay at $1.00. Use them to park your money safely between trades."},
