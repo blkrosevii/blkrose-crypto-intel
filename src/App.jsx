@@ -289,9 +289,9 @@ export default function App(){
   const [customSearching,setCustomSearching]=useState(false);
   const [showAutoPanel,setShowAutoPanel]=useState(false);
   const alertRef=useRef([]);
-  const customCoinsRef=useRef(()=>{
+  const customCoinsRef=useRef((()=>{
     try{const s=localStorage.getItem("rose_custom_coins");return s?JSON.parse(s):[];}catch{return[];}
-  }());
+  })());
 
   // ── Push Notifications ─────────────────────────────────────────────────
   const requestNotifPermission = async () => {
