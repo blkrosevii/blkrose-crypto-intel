@@ -574,7 +574,13 @@ export default function App(){
     return false;
   };
   const browsed=enriched
-    .filter(c=>(activeCat==="all"||c.cat===activeCat)&&(!search||c.name?.toLowerCase().includes(search.toLowerCase())||c.symbol?.toLowerCase().includes(search.toLowerCase()))&&(watchMode==="active"||modeFilter(c)))
+    .filter(c=>{
+      const matchesCat = activeCat==="all"||c.cat===activeCat;
+      const matchesSearch = !search||c.name?.toLowerCase().includes(search.toLowerCase())||c.symbol?.toLowerCase().includes(search.toLowerCase());
+      // When actively searching, show all matching coins regardless of mode
+      const passesMode = search.length>0 ? true : (watchMode==="active"||modeFilter(c));
+      return matchesCat && matchesSearch && passesMode;
+    })
     .sort((a,b)=>(b.score||0)-(a.score||0));
   const openTrades=trades.filter(t=>!t.closed);
   const closedTrades=trades.filter(t=>t.closed);
