@@ -497,10 +497,25 @@ export default function App(){
   // ── Auto Paper Trading Engine ─────────────────────────────────────────
   useEffect(()=>{
     if(!autoMode || watchMode!=="active" || !coins.length) return;
+
+    // Count only currently OPEN auto trades
     const openAutoTrades = autoLog.filter(t=>!t.closed).length;
     if(openAutoTrades >= autoRules.maxPositions) return;
 
-    coins.forEach(c=>{
+    // How many slots are available
+    const slotsAvailable = autoRules.maxPositions - openAutoTrades;
+    let slotsUsed = 0;
+
+    // Sort by score descending so best signals get picked first
+    const sorted = [...coins].sort((a,b)=>{
+      const sA = Math.min(Math.abs(getSignals(a).score||0)*12,100);
+      const sB = Math.min(Math.abs(getSignals(b).score||0)*12,100);
+      return sB - sA;
+    });
+
+    sorted.forEach(c=>{
+      if(slotsUsed >= slotsAvailable) return;
+
       const sig = getSignals(c);
       const cred = getCred(c.id);
       const score = Math.min(Math.abs(sig.score||0)*12,100);
@@ -511,25 +526,29 @@ export default function App(){
       if((cred.cred||0) < autoRules.minCred) return;
       if(c.cat === "meme" || c.cat === "stable") return;
 
-      // Check not already in auto log (open position or traded in last 4 hours)
-      const recentlyTraded = autoLog.some(t=>
-        t.coinId===c.id && ((!t.closed) || (Date.now()-t.openTs < 14400000))
+      // Only block if currently in an OPEN position for this coin
+      // Allow re-entry after close (30 min cooldown to avoid immediate re-buy)
+      const hasOpenPosition = autoLog.some(t=>t.coinId===c.id && !t.closed);
+      const recentlyClosed = autoLog.some(t=>
+        t.coinId===c.id && t.closed && (Date.now()-t.openTs < 1800000)
       );
-      if(recentlyTraded) return;
+      if(hasOpenPosition || recentlyClosed) return;
 
-      // Auto log the paper trade
+      // Calculate trade size from actual account settings
+      const tradeSize = cfg.acct * (cfg.risk / 100);
       const entry = c.current_price;
       const atr = entry * 0.04;
       const tp = entry + atr * 2.5;
       const sl = entry - atr * 1.0;
       const rr = ((tp-entry)/(entry-sl)).toFixed(1);
+
       const newTrade = {
         id: Date.now() + Math.random(),
         coinId: c.id,
         symbol: c.symbol?.toUpperCase(),
         name: c.name,
         entry, tp, sl, rr,
-        size: 500 * 0.02, // 2% of default account
+        size: tradeSize,
         type: autoRules.tradeType,
         openTime: nowT(),
         openTs: Date.now(),
@@ -540,7 +559,9 @@ export default function App(){
         signalScore: score,
         signalAtEntry: sig.verdict,
       };
-      setAutoLog(prev=>[newTrade,...prev].slice(0,50));
+
+      setAutoLog(prev=>[newTrade,...prev].slice(0,100));
+      slotsUsed++;
 
       // Send notification
       if(notifEnabled && Notification.permission==="granted"){
@@ -551,7 +572,7 @@ export default function App(){
         });
       }
     });
-  },[coins, autoMode, watchMode]);
+  },[coins, autoMode, watchMode, autoLog, autoRules, cfg, notifEnabled]);
 
   // Auto-close trades that hit TP or SL
   useEffect(()=>{
