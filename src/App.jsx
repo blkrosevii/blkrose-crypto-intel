@@ -587,6 +587,20 @@ export default function App(){
   const dailyPnL=closedTrades.reduce((a,t)=>a+(t.pnl||0),0);
   const winRate=closedTrades.length?Math.round(closedTrades.filter(t=>t.pnl>0).length/closedTrades.length*100):0;
 
+  // ── Auto trade combined stats ─────────────────────────────────────────
+  const autoClosedTrades=autoLog.filter(t=>t.closed);
+  const autoOpenTrades=autoLog.filter(t=>!t.closed);
+  const autoPnL=autoClosedTrades.reduce((a,t)=>a+(t.pnl||0),0);
+  // Unrealized P&L on open auto trades
+  const autoUnrealizedPnL=autoOpenTrades.reduce((t2,t)=>{
+    const coin=enriched.find(c=>c.id===t.coinId);
+    if(!coin) return t2;
+    return t2+(coin.current_price-t.entry)*(t.size/t.entry);
+  },0);
+  const combinedPnL=dailyPnL+autoPnL;
+  const combinedAccount=cfg.acct+combinedPnL;
+  const hasAutoActivity=autoLog.length>0;
+
   // ── Custom Coin Search ────────────────────────────────────────────────
   const searchCustomCoin = async (q) => {
     if(!q || q.length < 2) return;
@@ -941,9 +955,21 @@ Reply in EXACTLY this format:
               </div>
             )}
             <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:12,marginBottom:16}}>
-              <StatCard label="Account"    value={`$${cfg.acct.toLocaleString()}`} color={T.blue2}/>
-              <StatCard label="Daily P&L"  value={fu(dailyPnL)} color={pc(dailyPnL)}/>
-              <StatCard label="Open / Max" value={`${openTrades.length} / ${cfg.maxPos}`} color={T.blue2}/>
+              <Card style={{padding:"16px 18px"}}>
+                <Lbl>{cfg.paper?"Paper Account":"Live Account"}</Lbl>
+                <div style={{fontSize:26,fontWeight:800,color:combinedAccount>=cfg.acct?T.green:T.red,letterSpacing:"-0.02em",lineHeight:1}}>${combinedAccount.toFixed(2)}</div>
+                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Started: ${cfg.acct} · Auto P&L: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}{fu(autoPnL)}</span></div>}
+              </Card>
+              <Card style={{padding:"16px 18px"}}>
+                <Lbl>Daily P&L</Lbl>
+                <div style={{fontSize:26,fontWeight:800,color:pc(combinedPnL),letterSpacing:"-0.02em",lineHeight:1}}>{combinedPnL>=0?"+":""}{fu(combinedPnL)}</div>
+                {hasAutoActivity&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: {fu(dailyPnL)} · Auto: <span style={{color:pc(autoPnL)}}>{autoPnL>=0?"+":""}{fu(autoPnL)}</span></div>}
+              </Card>
+              <Card style={{padding:"16px 18px"}}>
+                <Lbl>Open Trades</Lbl>
+                <div style={{fontSize:26,fontWeight:800,color:T.blue2,letterSpacing:"-0.02em",lineHeight:1}}>{openTrades.length+autoOpenTrades.length}<span style={{fontSize:13,color:T.text3,fontWeight:400}}> / {cfg.maxPos}</span></div>
+                {autoOpenTrades.length>0&&<div style={{fontSize:11,color:T.text3,marginTop:5}}>Manual: {openTrades.length} · Auto: {autoOpenTrades.length} · Unrealized: <span style={{color:pc(autoUnrealizedPnL)}}>{autoUnrealizedPnL>=0?"+":""}{fu(autoUnrealizedPnL)}</span></div>}
+              </Card>
               <StatCard label="Strong Buys" value={topBuys.filter(c=>c.verdict==="STRONG BUY").length} color={T.green}/>
               <StatCard label="Alerts" value={alerts.length} color={T.blue2}/>
             </div>
