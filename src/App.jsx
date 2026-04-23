@@ -327,26 +327,24 @@ export default function App(){
   const fetchCoins=useCallback(async(silent=false)=>{
     if(!silent) setStatus("loading");
     try{
-      // VIP list — high credibility coins always fetched regardless of rank
-      const permanentIds = [
-        "hedera-hashgraph","algorand","kaspa","celestia","stacks",
-        "immutable-x","dydx","aave","lido-dao","ens",
-        "oasis-network","thorchain","gmx","pendle","akash-network","singularitynet",
-      ];
-      const latestCustom = customCoinsRef.current.length ? customCoinsRef.current : customCoins;
-      const allExtraIds = [...new Set([...permanentIds,...latestCustom.map(c=>c.id)])];
-      const customIds = allExtraIds.join(",");
-      const [p1,p2,p3,customData] = await Promise.all([
-        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
-        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=2&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
-        fetch(`${GC}/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=3&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]),
-        customIds ? fetch(`${GC}/coins/markets?vs_currency=usd&ids=${customIds}&sparkline=false&price_change_percentage=1h,24h,7d`).then(r=>r.ok?r.json():[]) : Promise.resolve([]),
+      // VIP ids always fetched no matter what rank they are
+      const VIP_IDS = "hedera-hashgraph,algorand,kaspa,celestia,stacks,immutable-x,dydx,aave,lido-dao,ens,oasis-network,thorchain,gmx,pendle,akash-network,singularitynet";
+      let savedCustom = [];
+      try { savedCustom = JSON.parse(localStorage.getItem("rose_custom_coins")||"[]"); } catch(e){}
+      const savedCustomIds = savedCustom.map(c=>c.id).filter(Boolean).join(",");
+      const extraIds = savedCustomIds ? VIP_IDS+","+savedCustomIds : VIP_IDS;
+      const base = GC+"/coins/markets?vs_currency=usd";
+      const params = "&sparkline=false&price_change_percentage=1h,24h,7d";
+      const [p1,p2,p3,vipData] = await Promise.all([
+        fetch(base+"&order=market_cap_desc&per_page=100&page=1"+params).then(r=>r.ok?r.json():[]),
+        fetch(base+"&order=market_cap_desc&per_page=100&page=2"+params).then(r=>r.ok?r.json():[]),
+        fetch(base+"&order=market_cap_desc&per_page=100&page=3"+params).then(r=>r.ok?r.json():[]),
+        fetch(base+"&ids="+extraIds+params).then(r=>r.ok?r.json():[]),
       ]);
-      const pages = [p1,p2,p3];
-      // Merge custom coins in, deduplicating
       const standardIds = new Set([...p1,...p2,...p3].map(c=>c.id));
-      const extraCustom = customData.filter(c=>!standardIds.has(c.id));
-      const all=[...pages.flat(),...extraCustom].map(c=>({...c,cat:getCat(c.id),isCustom:extraCustom.some(x=>x.id===c.id)}));
+      const extraOnly = vipData.filter(c=>!standardIds.has(c.id));
+      const customIdSet = new Set(savedCustom.map(c=>c.id));
+      const all=[...p1,...p2,...p3,...extraOnly].map(c=>({...c,cat:getCat(c.id),isCustom:customIdSet.has(c.id)}));
       if(!all.length) throw new Error("empty");
       setCoins(all);
       setStatus("live");
