@@ -1599,6 +1599,14 @@ Reply in EXACTLY this format:
                       </div>
                     );
                   })()}
+                  {/* Legend */}
+                  <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:12,padding:"10px 14px",background:T.surf,borderRadius:8,fontSize:12,color:T.text3,lineHeight:1.7}}>
+                    <span><span style={{color:T.blue2,fontWeight:700}}>Entry</span> — Price the auto trade opened at</span>
+                    <span><span style={{color:T.green,fontWeight:700}}>TP (Take Profit)</span> — Target sell price to lock in gain</span>
+                    <span><span style={{color:T.red,fontWeight:700}}>SL (Stop Loss)</span> — Exit price to limit loss if trade goes wrong</span>
+                    <span><span style={{color:T.blue2,fontWeight:700}}>R:R (Risk/Reward)</span> — How much you gain vs risk. 2.5:1 means gain $2.50 for every $1 risked</span>
+                    <span><span style={{color:T.gold,fontWeight:700}}>Score</span> — Confidence score when signal fired (0-100)</span>
+                  </div>
                   {/* Trade rows */}
                   <div style={{overflowX:"auto"}}>
                     <table style={{width:"100%",borderCollapse:"collapse",fontSize:13}}>
@@ -1758,6 +1766,11 @@ Reply in EXACTLY this format:
               <div style={{fontSize:13,color:T.text3,letterSpacing:"0.08em",marginBottom:6}}>POSITION SIZE ($) — MAX ${(cfg.acct*cfg.risk/100).toFixed(0)}</div>
               <input value={tf.size} onChange={e=>setTf(p=>({...p,size:e.target.value}))} placeholder="Amount to invest"
                 style={{width:"100%",padding:"10px 14px",background:T.card,border:`1px solid ${T.bdr}`,borderRadius:8,color:T.text,fontSize:15,fontFamily:"inherit",outline:"none"}}/>
+            </div>
+            <div style={{marginBottom:12,padding:"10px 14px",background:T.surf,borderRadius:8,fontSize:12,color:T.text3,lineHeight:1.8,borderLeft:`3px solid ${T.blue}`}}>
+              <span style={{color:T.green,fontWeight:700}}>TP (Take Profit)</span> — price to sell and lock in your gain ·{" "}
+              <span style={{color:T.red,fontWeight:700}}>SL (Stop Loss)</span> — price to exit and limit your loss ·{" "}
+              <span style={{color:T.blue2,fontWeight:700}}>R:R</span> — calculated automatically from trade type
             </div>
             <div style={{marginBottom:14}}>
               <div style={{fontSize:13,color:T.text3,letterSpacing:"0.08em",marginBottom:8}}>TRADE TYPE</div>
