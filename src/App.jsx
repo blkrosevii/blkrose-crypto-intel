@@ -1181,6 +1181,19 @@ Reply in EXACTLY this format:
                         </div>
                       </div>
                       {a.sr&&<div style={{fontSize:13,color:T.text3,marginTop:4}}>S1: <span style={{color:T.green}}>{fu(a.sr.s1)}</span> · R1: <span style={{color:T.red}}>{fu(a.sr.r1)}</span></div>}
+                      {/* Show coin tags if any exist */}
+                      {(coinTags[a.id]||[]).length>0&&(
+                        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginTop:6}}>
+                          {(coinTags[a.id]||[]).map(t=>{
+                            const tagDef=SUGGESTED_TAGS.find(s=>s.label===t)||{color:"#64748b"};
+                            return(
+                              <span key={t} style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:20,background:`${tagDef.color}20`,border:`1px solid ${tagDef.color}60`,color:tagDef.color,whiteSpace:"nowrap"}}>
+                                {t}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                       {/* Confidence score bar */}
                       <div style={{marginTop:8}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
